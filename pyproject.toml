@@ -1,0 +1,57 @@
+# /Users/junluo/Desktop/PlaneWar_Server/pyproject.toml
+
+[tool.poetry]
+name = "planewar-server" # Renamed slightly to reflect client+server nature
+version = "0.1.0"
+description = "Networked PlaneWar game with Flask server and leaderboard" # Updated description
+authors = ["Jimmy Luojun <15828061015@163.com>"]
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/JimmyLuojun/PlaneWar" # Keep or update if repo location changed
+# homepage = "https://github.com/JimmyLuojun/PlaneWar" # Optional
+keywords = ["pygame", "game", "shooter", "arcade", "flask", "networked"] # Added server keywords
+
+# --- Crucial: Define the packages within this project ---
+# Tells Poetry where to find the Python code relative to this file
+packages = [{include = "game"}, {include = "server"}]
+
+[tool.poetry.dependencies]
+python = "^3.10" # Keep your original Python requirement
+
+# == Client Dependencies ==
+pygame = "^2.5.2"   # Keep your specific pygame version
+requests = "^2.31.0" # Added: For client to call server API
+
+# == Server Dependencies ==
+flask = "^3.0.3"
+flask-sqlalchemy = "^3.1.1"
+flask-migrate = "^4.0.7"
+flask-login = "^0.6.3"
+flask-bcrypt = "^1.0.1"
+python-dotenv = "^1.0.1"
+gunicorn = "^22.0.0"      # WSGI server for deployment
+
+# == Optional Database Drivers (add as needed via --extras) ==
+psycopg2-binary = { version = "^2.9.9", optional = true } # For PostgreSQL
+mysqlclient = { version = "^2.2.0", optional = true }   # For MySQL
+
+# --- Optional Extras (for installing DB drivers) ---
+[tool.poetry.extras]
+postgres = ["psycopg2-binary"]
+mysql = ["mysqlclient"]
+
+# --- Development Dependencies ---
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.4.4" # Keep your linter/formatter
+# pytest = "^8.1.1" # Uncomment if you add tests
+
+# --- Optional: Scripts for easy running ---
+# Run these from the PlaneWar_Server/ directory using `poetry run <script_name>`
+[tool.poetry.scripts]
+run-planewar-game = "game.main:main"
+run-planewar-server = "server.app:run_dev_server" # Assumes run_dev_server func in server/app.py
+
+# --- Build System Configuration ---
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

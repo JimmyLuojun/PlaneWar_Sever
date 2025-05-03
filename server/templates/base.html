@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}PlaneWar{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <nav>
+        <div class="nav-wrapper">
+            <a href="{{ url_for('views.index') }}" class="brand">PlaneWar</a>
+            <ul class="nav-links">
+                <li><a href="{{ url_for('views.leaderboard') }}">Leaderboard</a></li>
+                {% if current_user.is_authenticated %}
+                    <li><a href="{{ url_for('views.profile') }}">Profile</a></li>
+                    <li><a href="{{ url_for('auth.logout') }}">Logout</a></li>
+                {% else %}
+                    <li><a href="{{ url_for('auth.login') }}">Login</a></li>
+                    <li><a href="{{ url_for('auth.register') }}">Register</a></li>
+                {% endif %}
+            </ul>
+        </div>
+    </nav>
+
+    <main>
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <div class="flashes">
+                    {% for message in messages %}
+                        <div class="flash">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}
+        <div class="welcome">
+            <h1>Welcome to PlaneWar</h1>
+            <p>A multiplayer plane war game with online leaderboards!</p>
+            {% if not current_user.is_authenticated %}
+                <div class="cta-buttons">
+                    <a href="{{ url_for('auth.login') }}" class="button">Login to Play</a>
+                    <a href="{{ url_for('auth.register') }}" class="button">Register Now</a>
+                </div>
+            {% endif %}
+        </div>
+        {% endblock %}
+    </main>
+
+    <footer>
+        <p>&copy; 2024 PlaneWar. All rights reserved.</p>
+    </footer>
+</body>
+</html> 

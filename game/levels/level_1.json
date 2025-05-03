@@ -1,0 +1,23 @@
+{
+    "level_number": 1,
+    "comment": "Harder waves for 30s, then Boss appears.",
+    "is_boss_level": true, 
+    "boss_appear_delay_seconds": 30, 
+    "duration_seconds": null, 
+    "enemy_types": [
+        "enemy1"
+    ], 
+    "spawn_interval": 75, 
+    "max_on_screen": 7, 
+    "enemy_speed_y_range": [
+        1,
+        3
+    ], 
+    "enemy_speed_x_range": [
+        -1,
+        1
+    ], 
+    "powerup_interval": 15000,
+    "background": null,
+    "music": null
+}
