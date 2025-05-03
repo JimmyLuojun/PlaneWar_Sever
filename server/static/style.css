@@ -1,208 +1,225 @@
-/* Base styles */
-:root {
-    --primary-color: #007bff;
-    --secondary-color: #6c757d;
-    --success-color: #28a745;
-    --danger-color: #dc3545;
-    --background-color: #f8f9fa;
-    --text-color: #212529;
-}
-
-* {
+/* /Users/junluo/Desktop/桌面文件/PlaneWar_Sever/server/static/style.css */
+/* Basic Reset & Body Styling */
+body {
+    font-family: sans-serif;
+    line-height: 1.6;
     margin: 0;
     padding: 0;
-    box-sizing: border-box;
+    background-color: #f4f4f4;
+    color: #333;
 }
 
-body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    line-height: 1.6;
-    color: var(--text-color);
-    background-color: var(--background-color);
+.container {
+    max-width: 960px;
+    margin: 20px auto;
+    padding: 20px;
+    background-color: #fff;
+    border: 1px solid #ddd;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
 }
 
 /* Navigation */
 nav {
-    background-color: #fff;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    background-color: #333;
+    color: #fff;
+    padding: 10px 0;
+    margin-bottom: 20px;
 }
 
-.nav-wrapper {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 1rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+nav h1 {
+    display: inline-block;
+    margin: 0 0 0 20px;
+    font-size: 1.5em;
 }
 
-.brand {
-    font-size: 1.5rem;
-    font-weight: bold;
-    color: var(--primary-color);
-    text-decoration: none;
-}
-
-.nav-links {
+nav ul {
     list-style: none;
-    display: flex;
-    gap: 1.5rem;
+    padding: 0;
+    margin: 0;
+    float: right;
 }
 
-.nav-links a {
-    color: var(--text-color);
+nav ul li {
+    display: inline-block;
+    margin-right: 20px;
+}
+
+nav ul li a {
+    color: #fff;
     text-decoration: none;
-    transition: color 0.3s;
+    padding: 5px 10px;
 }
 
-.nav-links a:hover {
-    color: var(--primary-color);
+nav ul li a:hover {
+    background-color: #555;
+    border-radius: 3px;
 }
 
-/* Main content */
-main {
-    max-width: 1200px;
-    margin: 2rem auto;
-    padding: 0 1rem;
+nav ul li span {
+    color: #ccc;
+    /* Style for logged-in user text */
 }
 
-/* Welcome section */
-.welcome {
-    text-align: center;
-    padding: 3rem 1rem;
-}
-
-.welcome h1 {
-    font-size: 2.5rem;
-    margin-bottom: 1rem;
-}
-
-.cta-buttons {
-    margin-top: 2rem;
-    display: flex;
-    gap: 1rem;
-    justify-content: center;
-}
-
-/* Auth forms */
-.auth-container {
-    max-width: 400px;
-    margin: 2rem auto;
-    padding: 2rem;
-    background-color: #fff;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.auth-form {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
+/* Forms */
+form {
+    margin-top: 20px;
 }
 
 .form-group {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
+    margin-bottom: 15px;
 }
 
 .form-group label {
-    font-weight: 500;
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
 }
 
-.form-group input {
-    padding: 0.5rem;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-}
-
-/* Buttons */
-.button {
-    display: inline-block;
-    padding: 0.75rem 1.5rem;
-    background-color: var(--primary-color);
-    color: #fff;
-    text-decoration: none;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 0.3s;
-}
-
-.button:hover {
-    background-color: #0056b3;
-}
-
-/* Leaderboard */
-.leaderboard-container {
-    background-color: #fff;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    padding: 2rem;
-}
-
-.leaderboard {
+.form-group input[type="text"],
+.form-group input[type="password"],
+.form-group input[type="email"] {
+    /* Add other input types as needed */
     width: 100%;
-    border-collapse: collapse;
-    margin-top: 1rem;
+    padding: 8px;
+    border: 1px solid #ccc;
+    box-sizing: border-box;
+    /* Include padding in width */
+    border-radius: 3px;
 }
 
-.leaderboard th,
-.leaderboard td {
-    padding: 1rem;
-    text-align: left;
-    border-bottom: 1px solid #ddd;
+.form-group.form-check {
+    margin-bottom: 15px;
 }
 
-.leaderboard th {
-    background-color: #f8f9fa;
-    font-weight: 600;
+.form-group.form-check input[type="checkbox"] {
+    margin-right: 5px;
+    vertical-align: middle;
+    /* Align checkbox with label */
 }
 
-.no-scores {
-    text-align: center;
-    color: var(--secondary-color);
+.form-group.form-check label {
+    display: inline-block;
+    /* Keep label on same line */
+    font-weight: normal;
 }
 
-/* Flash messages */
+
+button.btn,
+a.btn {
+    display: inline-block;
+    background-color: #5cb85c;
+    color: white;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    text-decoration: none;
+    font-size: 1em;
+}
+
+button.btn:hover,
+a.btn:hover {
+    background-color: #4cae4c;
+}
+
+/* Flashed Messages */
 .flashes {
-    margin-bottom: 1rem;
+    list-style: none;
+    padding: 0;
+    margin: 0 0 20px 0;
 }
 
 .flash {
-    padding: 1rem;
-    background-color: var(--primary-color);
-    color: #fff;
-    border-radius: 4px;
-    margin-bottom: 0.5rem;
+    padding: 10px 15px;
+    margin-bottom: 10px;
+    border-radius: 3px;
+    border: 1px solid transparent;
 }
+
+.flash-success {
+    background-color: #dff0d8;
+    border-color: #d6e9c6;
+    color: #3c763d;
+}
+
+.flash-info {
+    background-color: #d9edf7;
+    border-color: #bce8f1;
+    color: #31708f;
+}
+
+.flash-warning {
+    background-color: #fcf8e3;
+    border-color: #faebcc;
+    color: #8a6d3b;
+}
+
+.flash-danger {
+    background-color: #f2dede;
+    border-color: #ebccd1;
+    color: #a94442;
+}
+
+
+/* Leaderboard Table */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+table th,
+table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+}
+
+table th {
+    background-color: #f2f2f2;
+    font-weight: bold;
+}
+
+table tbody tr:nth-child(even) {
+    background-color: #f9f9f9;
+    /* Zebra striping */
+}
+
+table tbody tr:hover {
+    background-color: #e9e9e9;
+}
+
+/* Pagination */
+.pagination {
+    margin-top: 20px;
+    text-align: center;
+}
+
+.pagination a,
+.pagination span {
+    display: inline-block;
+    padding: 5px 10px;
+    margin: 0 2px;
+    border: 1px solid #ddd;
+    text-decoration: none;
+    color: #337ab7;
+}
+
+.pagination span {
+    color: #777;
+    background-color: #f5f5f5;
+}
+
+.pagination a:hover {
+    background-color: #eee;
+}
+
 
 /* Footer */
 footer {
     text-align: center;
-    padding: 2rem;
-    color: var(--secondary-color);
-    border-top: 1px solid #ddd;
+    margin-top: 30px;
+    padding-top: 15px;
+    border-top: 1px solid #eee;
+    color: #777;
 }
-
-/* Responsive design */
-@media (max-width: 768px) {
-    .nav-wrapper {
-        flex-direction: column;
-        gap: 1rem;
-    }
-    
-    .nav-links {
-        flex-direction: column;
-        align-items: center;
-    }
-    
-    .cta-buttons {
-        flex-direction: column;
-    }
-    
-    .leaderboard th,
-    .leaderboard td {
-        padding: 0.5rem;
-    }
-} 

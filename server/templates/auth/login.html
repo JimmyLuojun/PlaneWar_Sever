@@ -1,23 +1,24 @@
 {% extends "base.html" %}
 
-{% block title %}Login - PlaneWar{% endblock %}
+{% block title %}Log In - PlaneWar Server{% endblock %}
 
 {% block content %}
-<div class="auth-container">
-    <h2>Login</h2>
-    <form method="POST" action="{{ url_for('auth.login') }}" class="auth-form">
+    <h2>Log In</h2>
+    <form method="POST" action="{{ url_for('auth.login') }}">
+        {# Add CSRF token if using Flask-WTF #}
         <div class="form-group">
-            <label for="username">Username</label>
+            <label for="username">Username:</label>
             <input type="text" id="username" name="username" required>
         </div>
         <div class="form-group">
-            <label for="password">Password</label>
+            <label for="password">Password:</label>
             <input type="password" id="password" name="password" required>
         </div>
-        <button type="submit" class="button">Login</button>
+        <div class="form-group form-check">
+             <input type="checkbox" id="remember" name="remember">
+             <label for="remember">Remember Me</label>
+        </div>
+        <button type="submit" class="btn">Log In</button>
     </form>
-    <p class="auth-links">
-        Don't have an account? <a href="{{ url_for('auth.register') }}">Register here</a>
-    </p>
-</div>
-{% endblock %} 
+    <p>Need an account? <a href="{{ url_for('auth.register') }}">Register here</a>.</p>
+{% endblock %}
