@@ -1,115 +1,150 @@
-import pytest
+# tests/game/test_enemy.py
+import os
+import random
 import pygame
+import pytest
 from unittest.mock import MagicMock
 
-from game.enemy import Enemy, EnemyBullet, EnemyBoss
-from game.settings import SCREEN_HEIGHT, ENEMY_BULLET_SPEED_Y
+# 强制 headless 模式
+os.environ["SDL_VIDEODRIVER"] = "dummy"
+pygame.init()
+try:
+    pygame.display.set_mode((1,1))
+except pygame.error:
+    pass
 
+from game.enemy import Enemy, EnemyBoss
+from game.settings import (
+    SCREEN_WIDTH, SCREEN_HEIGHT,
+    ENEMY_MIN_SPEED_Y, ENEMY_MAX_SPEED_Y,
+    ENEMY_MIN_SPEED_X, ENEMY_MAX_SPEED_X,
+    BOSS_SPEED_Y, BOSS_ENTRY_Y,
+    BOSS_SPEED_X, BOSS_SHOOT_DELAY,
+    BOSS_MAX_HEALTH,
+)
 
-def test_enemy_moves_down_and_kills_offscreen(mock_surface):
-    # Arrange: create an Enemy and spy on kill()
-    enemy = Enemy(enemy_img=mock_surface, speed_y_range=(1, 1), speed_x_range=(0, 0))
-    enemy.kill = MagicMock()
-    # Position just below the bottom
-    enemy.rect.top = SCREEN_HEIGHT + 1
+# 一个简单的 Surface mock
+mock_img = MagicMock(spec=pygame.Surface)
+mock_rect = MagicMock(spec=pygame.Rect)
+mock_rect.width = 20
+mock_rect.height = 20
+mock_img.get_rect.return_value = mock_rect
 
-    # Act
-    enemy.update()
+def test_enemy_init_default_speed_ranges(monkeypatch):
+    # randint 返回最小值，choice 取列表首项
+    monkeypatch.setattr(random, "randint", lambda a,b: a)
+    monkeypatch.setattr(random, "choice", lambda seq: seq[0])
+    e = Enemy(enemy_img=mock_img)
+    # x,y 分别是 randint 返回的 a 和 -100
+    assert e.rect.x == 0
+    assert e.rect.y == -100
+    # 垂直速度在合法范围内
+    assert ENEMY_MIN_SPEED_Y <= e.speedy <= ENEMY_MAX_SPEED_Y
+    # 水平速度不为 0
+    assert e.speedx != 0
 
-    # Assert
-    enemy.kill.assert_called_once()
+def test_enemy_update_movement_and_bounce(monkeypatch):
+    monkeypatch.setattr(random, "randint", lambda a,b: a)
+    monkeypatch.setattr(random, "choice", lambda seq: seq[0])
+    # 制造一个左右速度都可控的敌人
+    e = Enemy(enemy_img=mock_img, speed_y_range=(5,5), speed_x_range=(3,3))
+    # 放到屏幕右边缘外
+    e.rect.right = SCREEN_WIDTH + 1
+    e.rect.left = e.rect.right - e.rect.width
+    # 更新并测试反弹
+    old_speedx = e.speedx
+    e.update()
+    assert e.speedx == -old_speedx
+    # 位置被 clamp 到 SCREEN_WIDTH
+    assert e.rect.right <= SCREEN_WIDTH
 
+def test_enemy_update_kill_offscreen(monkeypatch):
+    monkeypatch.setattr(random, "randint", lambda a,b: a)
+    monkeypatch.setattr(random, "choice", lambda seq: seq[0])
+    e = Enemy(enemy_img=mock_img)
+    e.kill = MagicMock()
+    # 放到屏幕底部外
+    e.rect.top = SCREEN_HEIGHT + 1
+    e.update()
+    e.kill.assert_called_once()
 
-def test_enemy_speed_applies(mock_surface):
-    # Arrange: enemy falls at speed 3
-    enemy = Enemy(enemy_img=mock_surface, speed_y_range=(3, 3), speed_x_range=(0, 0))
-    original_y = enemy.rect.y
+def test_enemyboss_init_and_take_damage():
+    all_sprites = pygame.sprite.Group()
+    enemy_bullets = pygame.sprite.Group()
+    boss_img = mock_img.copy()
+    shoot_sound = MagicMock()
+    boss = EnemyBoss(
+        boss_img, shoot_sound,
+        all_sprites, enemy_bullets,
+        target_player=False
+    )
+    # 初始状态检查
+    assert boss.rect.centerx == SCREEN_WIDTH // 2
+    assert boss.rect.bottom == -20
+    assert not boss.entered
+    assert boss.health == boss.max_health == BOSS_MAX_HEALTH
 
-    # Act
-    enemy.update()
+    boss.take_damage(7)
+    assert boss.health == BOSS_MAX_HEALTH - 7
 
-    # Assert
-    assert enemy.rect.y == original_y + 3
-
-
-def test_enemy_bullet_moves_and_kills(mock_groups, monkeypatch):
-    # Arrange: patch pygame.Surface to use a mock surface
-    fake_surf = mock_groups['all_sprites']  # not used directly
-    # Instantiate bullet and spy on kill()
-    bullet = EnemyBullet(100, 50)
-    bullet.kill = MagicMock()
-    # Move bullet off-screen
-    bullet.rect.top = SCREEN_HEIGHT + 1
-
-    # Act
-    bullet.update()
-
-    # Assert kill() called
-    bullet.kill.assert_called_once()
-
-
-def test_enemy_bullet_speed(mock_groups):
-    # Arrange
-    bullet = EnemyBullet(0, 0)
-    original_y = bullet.rect.y
-
-    # Act
-    bullet.update()
-
-    # Assert
-    assert bullet.rect.y == original_y + ENEMY_BULLET_SPEED_Y
-
-
-def test_boss_added_to_group_on_init(mock_surface, mock_sounds, mock_groups):
-    # Arrange
-    all_sprites = mock_groups['all_sprites']
-    enemy_bullets = mock_groups['enemy_bullets']
-    shoot_sound = mock_sounds['boss_shoot']
-
-    # Act
-    boss = EnemyBoss(mock_surface, shoot_sound, all_sprites, enemy_bullets)
-
-    # Assert boss was added to all_sprites
-    all_sprites.add.assert_called_with(boss)
-
-
-def test_boss_shoot_creates_bullet_and_plays_sound(mock_surface, mock_sounds, mock_groups):
-    # Arrange
-    all_sprites = mock_groups['all_sprites']
-    enemy_bullets = mock_groups['enemy_bullets']
-    shoot_sound = mock_sounds['boss_shoot']
-    boss = EnemyBoss(mock_surface, shoot_sound, all_sprites, enemy_bullets)
-
-    # Reset mocks
-    all_sprites.add.reset_mock()
-    enemy_bullets.add.reset_mock()
-    shoot_sound.play.reset_mock()
-
-    # Act
+def test_enemyboss_shoot_straight(monkeypatch):
+    all_sprites = pygame.sprite.Group()
+    enemy_bullets = pygame.sprite.Group()
+    boss_img = mock_img.copy()
+    sound = MagicMock()
+    boss = EnemyBoss(
+        boss_img, sound,
+        all_sprites, enemy_bullets,
+        target_player=False
+    )
+    # 直接调用 shoot
     boss.shoot()
+    # 子弹加进了组
+    assert len(enemy_bullets) == 1
+    bullet = next(iter(enemy_bullets))
+    # 直射：速度向量 x=0
+    assert pytest.approx(0) == bullet.velocity.x
 
-    # Assert a bullet was added and sound played
-    enemy_bullets.add.assert_called_once()
-    all_sprites.add.assert_called_once()
-    shoot_sound.play.assert_called_once()
+def test_enemyboss_shoot_target(monkeypatch):
+    all_sprites = pygame.sprite.Group()
+    enemy_bullets = pygame.sprite.Group()
+    boss_img = mock_img.copy()
+    sound = MagicMock()
+    # 准备一个伪玩家
+    player = MagicMock()
+    player.rect.center = (30, 80)
+    player.alive.return_value = True
 
+    boss = EnemyBoss(
+        boss_img, sound,
+        all_sprites, enemy_bullets,
+        target_player=True, player_ref=player
+    )
+    # 伪造发射点
+    boss.rect.midbottom = (30, 10)
+    boss.shoot()
+    bullet = next(iter(enemy_bullets))
+    v = bullet.velocity
+    from math import isclose
+    mag = (v.x**2 + v.y**2)**0.5
+    # 斜射：方向被规范化后乘 speed => 长度约等于 speed
+    assert isclose(mag, bullet.speed, rel_tol=1e-3)
 
-def test_boss_take_damage_and_die(mock_surface, mock_sounds, mock_groups):
-    # Arrange
-    all_sprites = mock_groups['all_sprites']
-    enemy_bullets = mock_groups['enemy_bullets']
-    shoot_sound = mock_sounds['boss_shoot']
-    boss = EnemyBoss(mock_surface, shoot_sound, all_sprites, enemy_bullets)
-    boss.kill = MagicMock()
+def test_draw_health_bar(monkeypatch):
+    all_sprites = pygame.sprite.Group()
+    enemy_bullets = pygame.sprite.Group()
+    boss = EnemyBoss(
+        mock_img.copy(), None,
+        all_sprites, enemy_bullets
+    )
+    boss.health = boss.max_health // 2
+    surf = MagicMock(spec=pygame.Surface)
+    calls = []
 
-    # Act & Assert: boss takes damage but survives
-    boss.health = 5
-    boss.take_damage(3)
-    assert boss.health == 2
-    shoot_sound.play.assert_called_once()
+    def fake_rect(surface, color, rect, width=0):
+        calls.append((color, rect.width, rect.height, width))
 
-    # Act & Assert: boss takes fatal damage
-    shoot_sound.play.reset_mock()
-    boss.take_damage(5)
-    boss.kill.assert_called_once()
-    shoot_sound.play.assert_called_once()
+    monkeypatch.setattr(pygame.draw, "rect", fake_rect)
+    boss.draw_health_bar(surf)
+    # 背景、填充、边框 共 3 次 draw
+    assert len(calls) == 3

@@ -45,13 +45,14 @@ def run_game(screen_surf, clock_obj, fonts, images, sounds, level_data, backgrou
 
     # --- Get Level Configuration ---
     is_boss_level = level_data.get('is_boss_level', False)
+    boss_targets_player_flag = level_data.get('boss_targets_player', False) # Default False
     enemy_types = level_data.get('enemy_types', ['enemy1'])
     spawn_interval = level_data.get('spawn_interval', ENEMY_SPAWN_INTERVAL)
     max_on_screen = level_data.get('max_on_screen', MAX_ONSCREEN_ENEMIES)
     enemy_speed_y_range = level_data.get('enemy_speed_y_range', (ENEMY_MIN_SPEED_Y, ENEMY_MAX_SPEED_Y))
     enemy_speed_x_range = level_data.get('enemy_speed_x_range', (ENEMY_MIN_SPEED_X, ENEMY_MAX_SPEED_X))
     powerup_interval = level_data.get('powerup_interval', POWERUP_SPAWN_INTERVAL)
-    boss_appear_delay_seconds = level_data.get('boss_appear_delay_seconds', 99999)
+    boss_appear_delay_seconds = level_data.get('boss_appear_delay_seconds', 99999) # Large default
 
     # --- Resources ---
     font_score = fonts.get('score') or pygame.font.SysFont(None, FONT_SIZE_SCORE) # Fallback if needed
@@ -73,7 +74,7 @@ def run_game(screen_surf, clock_obj, fonts, images, sounds, level_data, backgrou
     bullets = pygame.sprite.Group()
     enemy_bullets = pygame.sprite.Group()
     powerups = pygame.sprite.Group()
-    boss_group = pygame.sprite.GroupSingle()
+    boss_group = pygame.sprite.GroupSingle() # Use GroupSingle for the boss
 
     if not isinstance(player_img, pygame.Surface): # Check if player image (or fallback) exists
         print("CRITICAL ERROR: Player image not available. Exiting.")
@@ -147,11 +148,16 @@ def run_game(screen_surf, clock_obj, fonts, images, sounds, level_data, backgrou
                         print(f"Error: Boss image missing or invalid for level {level_num}. Failing level.")
                         game_over_local = True # Mark level as failed
                     elif not boss_active:
+                         print(f"Spawning Boss (Targeting: {boss_targets_player_flag})")
                          boss_instance = EnemyBoss(
-                            boss_img, sounds.get('boss_shoot'), all_sprites, enemy_bullets
+                             boss_img,
+                             sounds.get('boss_shoot'),
+                             all_sprites,      # Group for adding bullets
+                             enemy_bullets,    # Group for adding bullets
+                             target_player=boss_targets_player_flag, # Pass the flag
+                             player_ref=player       # Pass the player object
                          )
-                         all_sprites.add(boss_instance)
-                         boss_group.add(boss_instance)
+                         boss_group.add(boss_instance) # Add to the single group for collision
                          boss_active = True
                          boss_spawned = True
                          print("Boss Incoming!")
@@ -179,7 +185,7 @@ def run_game(screen_surf, clock_obj, fonts, images, sounds, level_data, backgrou
 
             # --- Collisions ---
             enemy_hits = pygame.sprite.groupcollide(enemies, bullets, True, True)
-            for _ in enemy_hits: # Don't need the enemy object itself here
+            for hit_enemy in enemy_hits: # Iterate through hit enemies if needed later
                 player.score += 1
                 if sounds.get('enemy_explode'):
                     try: sounds.get('enemy_explode').play()
@@ -376,6 +382,8 @@ def main():
     LEVELS = utils.load_level_data(LEVELS_DIR)
     if not LEVELS:
         print("CRITICAL ERROR: No level data found."); pygame.quit(); sys.exit("Level Data Error")
+    else:
+        print(f"--- Levels Loaded: {len(LEVELS)} ---") # Confirm level count
 
     # --- Prepare Music Paths ---
     music_paths = {}
