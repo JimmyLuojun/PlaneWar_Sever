@@ -1,3 +1,10 @@
+"""Defines enemy classes, including regular enemies and bosses.
+
+Contains the `Enemy` class for standard enemies with basic movement and
+optional shooting, and the `EnemyBoss` class for more complex boss
+characters with distinct movement patterns, health, and potentially multiple
+attack types.
+"""
 # game/enemy.py
 
 import pygame
@@ -43,7 +50,7 @@ class Enemy(pygame.sprite.Sprite):
             self.rect.right = min(self.rect.right, SCREEN_WIDTH)
             self.rect.left  = max(self.rect.left, 0)
 
-        # **Kill as soon as it’s fully off-screen**
+        # **Kill as soon as it's fully off-screen**
         if self.rect.top > SCREEN_HEIGHT:
             self.kill()
 

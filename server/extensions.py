@@ -1,3 +1,10 @@
+"""Initializes and configures Flask extensions.
+
+Instantiates common Flask extensions (SQLAlchemy, Migrate, LoginManager)
+to avoid circular dependencies within the application factory pattern.
+Includes configuration specific to these extensions, like the user loader callback
+for Flask-Login.
+"""
 # /Users/junluo/Desktop/桌面文件/PlaneWar_Sever/server/extensions.py
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate

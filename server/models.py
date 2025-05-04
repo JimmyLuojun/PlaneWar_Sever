@@ -1,25 +1,33 @@
+"""Database models for the PlaneWar server application.
+
+Defines SQLAlchemy ORM models representing database tables, such as `User`
+(for player accounts) and `Score` (for storing game scores). Includes column
+definitions, relationships between models, and potentially helper methods
+(e.g., password hashing).
+"""
 # /Users/junluo/Desktop/桌面文件/PlaneWar_Sever/server/models.py
 from .extensions import db, login_manager, bcrypt
 from flask_login import UserMixin
-import datetime
+from datetime import datetime # Correct import
 
 @login_manager.user_loader
 def load_user(user_id):
     """Callback used by Flask-Login to reload the user object from the user ID stored in the session."""
     try:
-        return db.session.get(User, int(user_id)) # Use db.session.get for primary key lookup
+        # Use db.session.get for efficient primary key lookup
+        return db.session.get(User, int(user_id))
     except (TypeError, ValueError):
         return None
 
 class User(UserMixin, db.Model):
     """User model for authentication and relationship to scores."""
-    __tablename__ = 'users' # Optional: Explicit table name
+    __tablename__ = 'users'
 
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(64), index=True, unique=True, nullable=False)
     password_hash = db.Column(db.String(128), nullable=False)
-    # Define the one-to-many relationship with Score
-    # cascade="all, delete-orphan": ensures scores are deleted if the user is deleted
+
+    # Relationship: One user has many scores.
     scores = db.relationship('Score', backref='player', lazy='dynamic', cascade="all, delete-orphan")
 
     def set_password(self, password):
@@ -35,14 +43,19 @@ class User(UserMixin, db.Model):
 
 class Score(db.Model):
     """Score model to store game results."""
-    __tablename__ = 'scores' # Optional: Explicit table name
+    __tablename__ = 'scores'
 
     id = db.Column(db.Integer, primary_key=True)
+    # Foreign key relationship back to User table
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    # Value of the score achieved
     score_value = db.Column(db.Integer, nullable=False, index=True)
-    timestamp = db.Column(db.DateTime, index=True, default=datetime.datetime.utcnow)
-    level_reached = db.Column(db.Integer, nullable=True) # Optional
-    # Define the foreign key relationship back to User
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    # Level on which the score was achieved (ensure this is correct)
+    level = db.Column(db.Integer, nullable=False, index=True) # <<< MAKE SURE THIS LINE IS CORRECT
+    # Timestamp when the score was recorded (defaults to UTC now)
+    timestamp = db.Column(db.DateTime, nullable=False, index=True, default=datetime.utcnow)
 
     def __repr__(self):
-        return f'<Score {self.score_value} by User ID {self.user_id} at {self.timestamp}>'
+        # Updated repr to include level
+        return f'<Score {self.score_value} by UserID {self.user_id} on Level {self.level} at {self.timestamp}>'
+

@@ -1,3 +1,9 @@
+"""Main entry point and game loop logic for the PlaneWar Pygame client.
+
+Initializes Pygame, loads assets, manages game states (login, menu, playing, game over),
+instantiates game objects, handles the main event loop, updates game logic,
+and renders the game state to the screen.
+"""
 # /Users/junluo/Desktop/桌面文件/PlaneWar_Sever/game/main.py
 import pygame
 import os
@@ -14,7 +20,7 @@ from .background import Background
 # --- Helper/Management Modules ---
 from . import utils         # For loading helpers
 from . import ui            # For screen displays (Import the whole module)
-from . import network_client as network # For API calls
+from . import network_client as network # For API calls (using the updated network_client)
 
 # --- Game Logic Function (Kept in main for now) ---
 def run_game(screen_surf, clock_obj, fonts, images, sounds, level_data, background):
@@ -74,6 +80,7 @@ def run_game(screen_surf, clock_obj, fonts, images, sounds, level_data, backgrou
         pygame.quit(); sys.exit("Asset Loading Error")
 
     # Create Player instance (pass required sounds)
+    # Player score starts at 0 for each level run
     player = Player(
         player_img,
         sounds.get('player_shoot'),
@@ -105,7 +112,8 @@ def run_game(screen_surf, clock_obj, fonts, images, sounds, level_data, backgrou
         # Event Handling
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                return 'QUIT', player.score, level_num # Exit level, return score and level num
+                # Return current score and level number even on quit
+                return 'QUIT', player.score, level_num
 
             if event.type == pygame.KEYDOWN:
                 # Use bomb key defined in settings
@@ -137,7 +145,7 @@ def run_game(screen_surf, clock_obj, fonts, images, sounds, level_data, backgrou
                 if elapsed_seconds >= boss_appear_delay_seconds:
                     if not isinstance(boss_img, pygame.Surface):
                         print(f"Error: Boss image missing or invalid for level {level_num}. Failing level.")
-                        game_over_local = True
+                        game_over_local = True # Mark level as failed
                     elif not boss_active:
                          boss_instance = EnemyBoss(
                             boss_img, sounds.get('boss_shoot'), all_sprites, enemy_bullets
@@ -192,31 +200,35 @@ def run_game(screen_surf, clock_obj, fonts, images, sounds, level_data, backgrou
                              try: sounds.get('game_win').play()
                              except pygame.error as e: print(f"Warning: Could not play game win sound: {e}")
                         boss_instance.kill()
-                        player.score += 50
+                        player.score += 50 # Boss kill bonus score
                         print("Boss Defeated!")
                         boss_defeated = True
                         boss_active = False
                         boss_instance = None
-                        level_passed = True
+                        level_passed = True # Mark level as passed
 
             powerup_hits = pygame.sprite.spritecollide(player, powerups, True)
             for hit_powerup in powerup_hits:
                 player.activate_powerup(hit_powerup.type)
 
             # --- Player Death Check ---
-            if now - level_start_time > STARTUP_GRACE_PERIOD:
+            # Add grace period check
+            if now - level_start_time > STARTUP_GRACE_PERIOD: # Use grace period from settings
+                 # Check only if player is alive and shield is NOT active
                  if player.alive() and not player.shield_active:
-                    player_enemy_hits = pygame.sprite.spritecollide(player, enemies, True)
-                    player_boss_collision = pygame.sprite.spritecollide(player, boss_group, False)
-                    enemy_bullet_hits = pygame.sprite.spritecollide(player, enemy_bullets, True)
+                    player_enemy_hits = pygame.sprite.spritecollide(player, enemies, True) # Kill enemies on collision
+                    player_boss_collision = pygame.sprite.spritecollide(player, boss_group, False) # Don't kill boss on collision
+                    enemy_bullet_hits = pygame.sprite.spritecollide(player, enemy_bullets, True) # Kill bullets on collision
+
                     if player_enemy_hits or player_boss_collision or enemy_bullet_hits:
                         reason = "Enemy" if player_enemy_hits else ("Boss Collision" if player_boss_collision else "Enemy Bullet")
                         print(f"Player hit by {reason}! Level Failed!")
                         if sounds.get('player_lose'):
                             try: sounds.get('player_lose').play()
                             except pygame.error as e: print(f"Warning: Could not play player lose sound: {e}")
-                        player.kill()
-                        game_over_local = True
+                        player.kill() # Kill the player sprite
+                        game_over_local = True # Set game over flag
+
 
         # --- Drawing ---
         background.draw(screen_surf)
@@ -234,19 +246,26 @@ def run_game(screen_surf, clock_obj, fonts, images, sounds, level_data, backgrou
         except Exception as e:
             print(f"Error rendering UI text: {e}")
 
+        # Draw dynamic UI elements only if needed
         if boss_active and boss_instance:
             boss_instance.draw_health_bar(screen_surf)
-        if player.shield_active:
-            player.draw_shield(screen_surf)
+        if player.shield_active: # Check if shield is active before drawing
+            player.draw_shield(screen_surf) # Player method handles drawing
 
         # Check Level End Condition
+        # If a boss level, only passing if boss is defeated. Otherwise, assume passed if time/wave complete (simplified: only boss levels considered for 'PASSED' here)
+        if is_boss_level and boss_defeated:
+            level_passed = True
+
+        # Stop level loop if game over or level passed
         if game_over_local or level_passed:
             running_this_level = False
 
         pygame.display.flip()
 
     # --- Level Loop Ended ---
-    result = 'PASSED' if level_passed else ('FAILED' if game_over_local else 'QUIT')
+    # Determine result string based on final state
+    result = 'PASSED' if level_passed else ('FAILED' if game_over_local else 'QUIT') # Should not be 'QUIT' here if loop ended naturally
     print(f"--- Level {level_num} Ended. Result: {result}, Score: {player.score} ---")
     return result, player.score, level_num
 
@@ -378,46 +397,60 @@ def main():
 
     # --- Application State ---
     app_running = True
-    game_state = 'LOGIN_SCREEN'
+    game_state = 'LOGIN_SCREEN' # Start at login screen
     current_level_index = 0
     final_score_this_run = 0
-    last_level_played = 0
+    last_level_played = 0 # Initialize
     current_music_path = None
-    is_logged_in = False
-    logged_in_user_id = None
-    logged_in_username = None
+
+    # --- Authentication State (Managed via network_client now) ---
+    logged_in_username = None # Still useful for display
+    is_logged_in = False    # Track login status locally based on network_client results
+    # ------------------------------------------------------------
+
     last_login_message = None
-    last_submission_status = None
+    last_submission_status = None # Stores message from last submission attempt
 
     # --- Main Game Loop ---
     while app_running:
 
+        # Update local auth state from network_client (optional, but can be useful)
+        is_logged_in, logged_in_username = network.check_login_status()
+
         # --- State: LOGIN_SCREEN ---
         if game_state == 'LOGIN_SCREEN':
-            login_result, user_id, username, status_msg = ui.show_login_screen(screen, clock, fonts)
-            last_login_message = status_msg # Store message
+            # Assume ui.show_login_screen internally calls network.api_login_user
+            # and now returns (action, username, message)
+            # action can be 'LOGIN_SUCCESS', 'LOGIN_FAIL', 'QUIT'
+            login_action, username, status_msg = ui.show_login_screen(screen, clock, fonts, last_login_message)
+            last_login_message = status_msg # Store message for potential display on retry
 
-            if login_result == 'QUIT':
+            if login_action == 'QUIT':
                  app_running = False
-            elif login_result is True:
+            elif login_action == 'LOGIN_SUCCESS':
+                 # Update state based on successful login confirmed by UI layer
                  is_logged_in = True
-                 logged_in_user_id = user_id
-                 logged_in_username = username
-                 print(f"Logged in as User ID: {user_id}, Username: {username}")
+                 logged_in_username = username # Username returned by UI/network_client
+                 print(f"Main: Login successful for {logged_in_username}")
                  game_state = 'START_SCREEN'
-            elif login_result is False:
-                 print("Login failed, staying on login screen.")
-                 game_state = 'LOGIN_SCREEN' # Stay on login
+            elif login_action == 'LOGIN_FAIL':
+                 is_logged_in = False
+                 logged_in_username = None
+                 print("Main: Login failed, staying on login screen.")
+                 # Stay in LOGIN_SCREEN state, error message handled by show_login_screen
+
 
         # --- State: START_SCREEN ---
         elif game_state == 'START_SCREEN':
             if pygame.mixer and pygame.mixer.music.get_busy():
                  pygame.mixer.music.stop(); pygame.mixer.music.unload()
             current_music_path = None
+            # Pass username to potentially display "Welcome, [username]"
             ui.show_start_screen(screen, clock, fonts, high_score, logged_in_username)
             current_level_index = 0
-            final_score_this_run = 0
-            last_submission_status = None
+            final_score_this_run = 0 # Reset score for new run
+            last_level_played = 0 # Reset last level played
+            last_submission_status = None # Reset submission status
             game_state = 'LEVEL_START'
 
         # --- State: LEVEL_START ---
@@ -449,7 +482,9 @@ def main():
                 ui.show_level_start_screen(screen, clock, fonts, level_num)
                 game_state = 'RUNNING_LEVEL'
             else:
-                game_state = 'GAME_WON'
+                # This case should now be handled by GAME_WON transition
+                print("Warning: Reached LEVEL_START with no more levels?")
+                game_state = 'GAME_WON' # Or perhaps END_SCREEN directly?
 
         # --- State: RUNNING_LEVEL ---
         elif game_state == 'RUNNING_LEVEL':
@@ -457,52 +492,95 @@ def main():
             level_result, score_at_level_end, ended_level_num = run_game(
                 screen, clock, fonts, images, sounds, level_data, background
             )
+            # Capture results IMMEDIATELY after run_game returns
             final_score_this_run = score_at_level_end
             last_level_played = ended_level_num
 
+            # --- MOVED SCORE SUBMISSION LOGIC ---
+            # Submit score after EVERY level attempt (PASSED or FAILED), except QUIT
+            if level_result != 'QUIT':
+                submission_msg = None
+                # Use the captured level number from the finished level
+                level_to_submit = last_level_played
+
+                # Check login status right before submitting
+                is_logged_in_now, current_username_local = network.check_login_status()
+
+                if is_logged_in_now:
+                    print(f"Attempting to submit score {final_score_this_run} for level {level_to_submit} (User: {current_username_local})")
+                    success, msg = network.api_submit_score(final_score_this_run, level_to_submit)
+                    submission_msg = msg
+                    print(f"Submission result: Success={success}, Message='{msg}'")
+                    last_submission_status = submission_msg # Store for end screen
+                else:
+                    # Handle local high score saving if user is not logged in
+                    print("User not logged in when level ended. Checking local high score.")
+                    if final_score_this_run > high_score:
+                        print(f"New Local High Score: {final_score_this_run}")
+                        utils.save_high_score(HIGH_SCORE_FILE_PATH, final_score_this_run)
+                        high_score = final_score_this_run
+                    submission_msg = "Not logged in. Score saved locally (if new high)."
+                    last_submission_status = submission_msg # Store for end screen
+            # --- END MOVED SCORE SUBMISSION LOGIC ---
+
+            # --- Now determine the next game state ---
             if level_result == 'PASSED':
-                current_level_index += 1
-                if current_level_index >= len(LEVELS): game_state = 'GAME_WON'
-                else: game_state = 'LEVEL_START'
-            elif level_result == 'FAILED': game_state = 'GAME_OVER'
-            elif level_result == 'QUIT': app_running = False
+                current_level_index += 1 # Prepare for the next level index
+                if current_level_index >= len(LEVELS):
+                    # Finished the last level successfully
+                    game_state = 'GAME_WON'
+                else:
+                    # More levels remain
+                    game_state = 'LEVEL_START'
+            elif level_result == 'FAILED':
+                 # Stop music on failure BEFORE potentially showing end screen
+                if pygame.mixer and pygame.mixer.music.get_busy():
+                    pygame.mixer.music.stop(); pygame.mixer.music.unload()
+                current_music_path = None
+                game_state = 'GAME_OVER' # Go directly to game over sequence
+            elif level_result == 'QUIT':
+                app_running = False # Exit the main loop
+
 
         # --- State: GAME_WON / GAME_OVER ---
+        # This state now primarily sets up for the end screen,
+        # as score submission happened immediately after RUNNING_LEVEL.
         elif game_state in ('GAME_WON', 'GAME_OVER'):
             game_result_for_screen = 'WIN' if game_state == 'GAME_WON' else 'LOSE'
-            print(f"Game ended: {game_state}")
+            print(f"Transitioning to end screen state ({game_state})")
 
+            # Ensure music is stopped if it wasn't already (e.g., GAME_WON)
             if pygame.mixer and pygame.mixer.music.get_busy():
                 pygame.mixer.music.stop(); pygame.mixer.music.unload()
             current_music_path = None
 
-            # Score Submission
-            submission_msg = None
-            level_to_submit = last_level_played
-            if is_logged_in and logged_in_user_id is not None:
-                print(f"Submitting score {final_score_this_run} for user ID {logged_in_user_id}, level {level_to_submit}")
-                success, msg = network.api_submit_score(logged_in_user_id, final_score_this_run, level_to_submit)
-                submission_msg = msg
-            else:
-                if final_score_this_run > high_score:
-                    print(f"New Local High Score: {final_score_this_run}")
-                    utils.save_high_score(HIGH_SCORE_FILE_PATH, final_score_this_run)
-                    high_score = final_score_this_run
-                submission_msg = "Not logged in. Score saved locally (if new high)."
-
-            last_submission_status = submission_msg
+            # The submission message (last_submission_status) should have been set already.
             game_state = 'END_SCREEN'
+
 
         # --- State: END_SCREEN ---
         elif game_state == 'END_SCREEN':
+            # Display end screen with result, final score, and submission status
             player_choice = ui.show_end_screen(
                 screen, clock, fonts, game_result_for_screen, final_score_this_run, last_submission_status
             )
-            if player_choice == 'QUIT': app_running = False
-            elif player_choice == 'REPLAY': game_state = 'START_SCREEN'
+            if player_choice == 'QUIT':
+                 # Optional: Attempt logout before quitting if logged in
+                is_logged_in_now, _ = network.check_login_status()
+                if is_logged_in_now:
+                      print("Main: Logging out before quit...")
+                      network.api_logout_user() # Attempt logout, ignore result for now
+                app_running = False
+            elif player_choice == 'REPLAY':
+                game_state = 'START_SCREEN' # Go back to start screen to allow re-login/play
 
     # --- Game Exit ---
     print("Exiting PlaneWar.")
+    # Attempt logout if still logged in when exiting main loop (e.g., via QUIT)
+    is_logged_in_now, _ = network.check_login_status()
+    if is_logged_in_now:
+         print("Main: Logging out on application exit...")
+         network.api_logout_user()
     pygame.quit()
     sys.exit()
 
@@ -512,6 +590,6 @@ if __name__ == '__main__':
         main()
     except Exception as e:
          print(f"\nAn unexpected error occurred during game execution: {e}")
-         # import traceback; traceback.print_exc() # Uncomment for detailed traceback
+         import traceback; traceback.print_exc() # Print detailed traceback on crash
          if pygame.get_init(): pygame.quit()
          sys.exit(1)

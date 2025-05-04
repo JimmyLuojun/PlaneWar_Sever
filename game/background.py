@@ -1,6 +1,13 @@
 # /Users/junluo/Desktop/桌面文件/PlaneWar_Sever/game/background.py
+"""Handles the game's background image, scrolling, and drawing.
+
+Defines the `Background` class responsible for loading the background image,
+updating its scrolling position based on a defined speed, and drawing the
+correct portion onto the game screen each frame.
+"""
 import pygame
 import os
+from .settings import SCREEN_WIDTH, SCREEN_HEIGHT
 # No internal package imports needed here
 
 class Background:

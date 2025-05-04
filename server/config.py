@@ -1,3 +1,9 @@
+"""Flask application configuration settings.
+
+Defines configuration classes (e.g., Config, DevelopmentConfig, ProductionConfig)
+for different deployment environments. Loads sensitive values from environment
+variables and provides default settings.
+"""
 # /Users/junluo/Desktop/桌面文件/PlaneWar_Sever/server/config.py
 import os
 from dotenv import load_dotenv

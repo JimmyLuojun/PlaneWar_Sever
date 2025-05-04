@@ -1,4 +1,9 @@
-# /Users/junluo/Desktop/桌面文件/PlaneWar_Sever/game/powerup.py
+"""Defines the PowerUp class for in-game items.
+
+Handles the creation, appearance (image or fallback color), movement,
+and type identification of power-ups that players can collect (e.g., double shot,
+shield, bomb).
+"""
 import pygame
 import random
 # --- Use relative import for settings ---

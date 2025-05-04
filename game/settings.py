@@ -1,3 +1,9 @@
+"""Configuration settings and constants for the Pygame client.
+
+Defines constants used throughout the game client, such as screen dimensions,
+colors, frame rates, speeds, asset paths, and server URLs. Loads values
+from environment variables where appropriate.
+"""
 # /Users/junluo/Desktop/PlaneWar_Sever/game/settings.py
 import pygame
 import os

@@ -1,4 +1,9 @@
-# /Users/junluo/Desktop/桌面文件/PlaneWar_Sever/game/bullet.py
+"""Defines projectile classes used in the game.
+
+Contains the `Bullet` class for player projectiles and potentially
+`EnemyBullet` class for enemy projectiles. Handles bullet movement,
+off-screen cleanup, and sprite representation.
+"""
 import pygame
 # --- Use relative import for settings ---
 from .settings import *

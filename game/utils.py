@@ -1,3 +1,9 @@
+"""Utility functions for the PlaneWar game client.
+
+Provides helper functions for common tasks such as loading and scaling images,
+loading sound files, loading/saving local high scores, and parsing level
+definition files.
+"""
 # /Users/junluo/Desktop/桌面文件/PlaneWar_Sever/game/utils.py
 
 import pygame

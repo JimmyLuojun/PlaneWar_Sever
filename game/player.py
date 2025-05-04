@@ -1,3 +1,9 @@
+"""Defines the Player class for the game.
+
+Handles player sprite initialization, movement based on mouse input,
+boundary checks, shooting mechanics (including delays and power-ups like
+double shot), shield activation/duration, bomb usage, and collision handling.
+"""
 # /Users/junluo/Desktop/桌面文件/PlaneWar_Sever/game/player.py
 import pygame
 # --- Use relative imports for modules within the 'game' package ---

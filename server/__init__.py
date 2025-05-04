@@ -1,3 +1,10 @@
+"""Initializes the Flask application using the Application Factory pattern.
+
+Defines the `create_app` function which sets up the Flask app instance,
+configures it based on environment settings, initializes extensions (like DB,
+LoginManager), and registers blueprints for different parts of the application
+(API, Views, Auth).
+"""
 # /Users/junluo/Desktop/桌面文件/PlaneWar_Sever/server/__init__.py
 import os
 import datetime # <-- Import datetime

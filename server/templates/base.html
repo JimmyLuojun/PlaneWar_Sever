@@ -8,6 +8,7 @@
     {% block head_extra %}{% endblock %}
 </head>
 <body>
+    {# ... (nav, container, content block remain the same) ... #}
     <nav>
         <h1>PlaneWar Online</h1>
         <ul>
@@ -39,8 +40,12 @@
         {% endblock %}
     </div>
 
+
     <footer>
-        <p>&copy; {{ now().year }} PlaneWar Project</p> {# Simple dynamic year #}
+        {# --- CORRECTED LINE --- #}
+        {# Access the .year attribute of the 'now' object injected by the context processor #}
+        <p>&copy; {{ now.year }} PlaneWar Project</p>
+        {# -------------------- #}
     </footer>
 
     {% block scripts_extra %}{% endblock %}
