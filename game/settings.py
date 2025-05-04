@@ -90,7 +90,7 @@ BOSS_SPEED_X = 3
 BOSS_SPEED_Y = 1           # Vertical speed for the boss (if used)
 BOSS_SHOOT_DELAY = 1500
 BOSS_MAX_HEALTH = 50
-ENEMY_BULLET_SPEED_Y = 6
+ENEMY_BULLET_SPEED_Y = 12
 
 STARTUP_GRACE_PERIOD = 1500
 PLAYER_STARTING_BOMBS = 3 # Define how many bombs the player starts with
