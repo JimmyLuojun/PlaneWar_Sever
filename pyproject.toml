@@ -47,6 +47,9 @@ ruff = "^0.4.4" # Keep your linter/formatter
 
 # --- Optional: Scripts for easy running ---
 # Run these from the PlaneWar_Server/ directory using `poetry run <script_name>`
+pytest = "^8.3.5"
+pytest-mock = "^3.14.0"
+requests-mock = "^1.12.1"
 [tool.poetry.scripts]
 run-planewar-game = "game.main:main"
 run-planewar-server = "server.app:run_dev_server" # Assumes run_dev_server func in server/app.py

@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}PlaneWar - How to Play{% endblock %}
+
+{% block content %}
+    <h2>How to Play PlaneWar</h2>
+
+    {% if current_user.is_authenticated %}
+        <p>Welcome back, {{ current_user.username }}!</p>
+    {% endif %}
+
+    <p>
+        PlaneWar is a desktop game client written in Python. It needs to connect to this running web server
+        to handle user login and leaderboard scores. Follow these steps to play the game on your computer:
+    </p>
+
+    {# Restructured Instructions for Clarity #}
+    <h3>Setup and Execution:</h3>
+
+    <h4>1. Prerequisites:</h4>
+    <ul> {# Using unordered list for prerequisites as they aren't strict sequential steps #}
+        <li>
+            <strong>Ensure you have Python and Poetry installed.</strong>
+            If not, please follow their official installation guides.
+        </li>
+        <li>
+            <strong>Get the Game Code:</strong> You need the PlaneWar project code on your computer (e.g., via <code>git clone</code> or download).
+        </li>
+        <li>
+            <strong>Ensure the Server is Running:</strong> This web server must be running (like it is now!) for the game client to authenticate and submit scores. If running locally, you typically start it in a <em>separate terminal</em> using <code>poetry run run-planewar-server</code> from the project directory.
+        </li>
+    </ul>
+
+    <h4>2. Running the Game Client:</h4>
+    <ol> {# Using ordered list for the sequential steps to run the game #}
+        <li>
+            <strong>Open Your Terminal</strong> and navigate to the game's main project directory:
+            <pre><code>cd /path/to/your/PlaneWar_Sever</code></pre>
+            <small>(Replace <code>/path/to/your/PlaneWar_Sever</code> with the <em>actual full path</em> on your system, e.g., <code>/Users/junluo/Desktop/桌面文件/PlaneWar_Sever</code>)</small>
+        </li>
+        <li>
+            <strong>Install dependencies</strong> (if you haven't already or they changed):
+            <pre><code>poetry install</code></pre>
+        </li>
+        <li>
+            <strong>Run the game client</strong> using this command:
+            {# --- UPDATED COMMAND --- #}
+            <pre><code>poetry run python -m game.main</code></pre>
+            {# --- Using -m as discussed --- #}
+        </li>
+    </ol>
+
+    <h4>3. Login and Play:</h4>
+    <ul>
+        <li>The PlaneWar game window should open.</li>
+        <li>Based on the server/client logs, the game client will likely prompt you to <strong>log in</strong>. Use the <em>same username and password</em> you used on this website (Username: {{ current_user.username | default('YourUsername') }}). The client sends these details to the running server's API (<code>/api/login</code>) for verification.</li>
+        <li>Once successfully logged in, play the game!</li>
+    </ul>
+
+    <h4>4. Check Your Score:</h4>
+    <ul>
+        <li>After you finish a game (win or lose), your score should be automatically submitted to this server via its API (<code>/api/submit_score</code>).</li>
+        <li>You can then refresh or navigate to the <a href="{{ url_for('views.leaderboard') }}">Leaderboard</a> page here to see your updated ranking.</li>
+    </ul>
+
+    <p>Good luck!</p>
+
+{% endblock %}

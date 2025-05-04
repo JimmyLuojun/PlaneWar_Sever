@@ -1,6 +1,7 @@
-# /Users/junluo/Desktop/PlaneWar/background.py
+# /Users/junluo/Desktop/桌面文件/PlaneWar_Sever/game/background.py
 import pygame
 import os
+# No internal package imports needed here
 
 class Background:
     """

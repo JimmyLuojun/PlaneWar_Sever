@@ -18,37 +18,38 @@
         <tbody>
             {% for score, username in scores_data %}
             <tr>
-                <td>{{ loop.index + rank_offset }}</td> {# Calculate rank based on loop and offset #}
+                <td>{{ loop.index + rank_offset }}</td>
                 <td>{{ username }}</td>
-                <td>{{ "{:,}".format(score.score_value) }}</td> {# Format score with commas #}
-                <td>{{ score.timestamp.strftime('%Y-%m-%d %H:%M') }}</td> {# Format date #}
+                <td>{{ score.score_value }}</td>
+                <td>{{ score.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
 
-    {# --- Pagination Controls --- #}
     {% if pagination and pagination.pages > 1 %}
     <div class="pagination">
         {% if pagination.has_prev %}
             <a href="{{ url_for('views.leaderboard', page=pagination.prev_num) }}">&laquo; Previous</a>
-        {% else %}
-            <span>&laquo; Previous</span>
         {% endif %}
-
-        <span> Page {{ pagination.page }} of {{ pagination.pages }} </span>
-
+        <span>Page {{ pagination.page }} of {{ pagination.pages }}</span>
         {% if pagination.has_next %}
             <a href="{{ url_for('views.leaderboard', page=pagination.next_num) }}">Next &raquo;</a>
-        {% else %}
-            <span>Next &raquo;</span>
         {% endif %}
     </div>
-     <p>Showing scores {{ rank_offset + 1 }} to {{ rank_offset + scores_data|length }} of {{ pagination.total }}.</p>
     {% endif %}
 
     {% else %}
-        <p>No scores submitted yet!</p>
+        <p>No scores submitted yet! Run the desktop game to submit your score.</p> {# Added hint #}
+    {% endif %}
+
+    {% if current_user.is_authenticated %}
+    {# --- MODIFIED LINE BELOW --- #}
+    {# Changed button text from "Start Game" to "Game Info / How to Play" #}
+    {# It still links to the /game route, which will now show instructions #}
+    <a href="{{ url_for('views.game') }}" class="btn btn-primary">Game Info / How to Play</a>
+    {% else %}
+        <p><a href="{{ url_for('auth.login') }}">Login</a> to view leaderboards and game info.</p> {# Slightly modified text #}
     {% endif %}
 
 {% endblock %}

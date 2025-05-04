@@ -1,8 +1,10 @@
-# /Users/junluo/Desktop/PlaneWar/player.py
+# /Users/junluo/Desktop/桌面文件/PlaneWar_Sever/game/player.py
 import pygame
-from settings import * # Import constants
-from bullet import Bullet
-from settings import PLAYER_STARTING_BOMBS
+# --- Use relative imports for modules within the 'game' package ---
+from .settings import * # Import constants
+from .bullet import Bullet # Import Bullet class
+
+# PLAYER_STARTING_BOMBS is already imported via 'from .settings import *'
 
 class Player(pygame.sprite.Sprite):
     """
@@ -50,6 +52,7 @@ class Player(pygame.sprite.Sprite):
         self.shield_visual_radius = max(self.rect.width, self.rect.height) // 2 + 8
         # Ensure SHIELD_VISUAL_COLOR is defined in settings (e.g., (*CYAN, 100))
         try:
+            # SHIELD_VISUAL_COLOR comes from 'from .settings import *'
             self.shield_visual_color = SHIELD_VISUAL_COLOR
         except NameError:
             print("Warning: SHIELD_VISUAL_COLOR not found in settings, using fallback.")
@@ -246,4 +249,3 @@ class Player(pygame.sprite.Sprite):
                  print("Warning: SHIELD_VISUAL_COLOR not defined in settings. Cannot draw shield.")
             except Exception as e:
                  print(f"Error drawing shield: {e}")
-

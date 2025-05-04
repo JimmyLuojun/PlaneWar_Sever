@@ -1,139 +1,141 @@
-# /Users/junluo/Desktop/PlaneWar/enemy.py
+# game/enemy.py
+
 import pygame
 import random
-from settings import * # Import settings for defaults
-from bullet import EnemyBullet
+from .settings import *         # bring in SCREEN_WIDTH, SCREEN_HEIGHT, etc.
+from .bullet import EnemyBullet
 
 class Enemy(pygame.sprite.Sprite):
-    # --- MODIFIED __init__ ---
+    """Basic enemy that drifts down and bounces horizontally."""
     def __init__(self, enemy_img, speed_y_range=None, speed_x_range=None):
         super().__init__()
         self.image = enemy_img
         self.rect = self.image.get_rect()
 
+        # spawn at random X, just above screen
         self.rect.x = random.randint(0, SCREEN_WIDTH - self.rect.width)
         self.rect.y = random.randint(-100, -40)
 
-        # --- Use provided speed ranges or fall back to defaults from settings.py ---
-        min_y, max_y = speed_y_range if speed_y_range is not None else (ENEMY_MIN_SPEED_Y, ENEMY_MAX_SPEED_Y)
-        min_x, max_x = speed_x_range if speed_x_range is not None else (ENEMY_MIN_SPEED_X, ENEMY_MAX_SPEED_X)
+        # determine speed ranges
+        min_y, max_y = speed_y_range or (ENEMY_MIN_SPEED_Y, ENEMY_MAX_SPEED_Y)
+        min_x, max_x = speed_x_range or (ENEMY_MIN_SPEED_X, ENEMY_MAX_SPEED_X)
 
-        # Ensure speeds are within reasonable bounds if provided ranges are invalid
-        min_y = max(1, min_y) # Min speed at least 1? Or adjust as needed
+        min_y = max(1, min_y)
         max_y = max(min_y, max_y)
-
         self.speedy = random.randint(min_y, max_y)
 
-        # Ensure speedx is not zero and within valid range
+        # pick a nonzero horizontal speed
         possible_speedx = [i for i in range(min_x, max_x + 1) if i != 0]
         if not possible_speedx:
-            # Fallback if range excludes non-zero (e.g., [-0, 0] or [-1, 1] fails)
-            if max_x != 0: possible_speedx.append(max_x)
-            elif min_x != 0: possible_speedx.append(min_x)
-            else: possible_speedx.append(1) # Absolute fallback
-
+            # fallback if range excludes all nonzero
+            possible_speedx = [x for x in (max_x, min_x, 1) if x != 0]
         self.speedx = random.choice(possible_speedx)
 
 
     def update(self):
-        """ Move the enemy down and bounce horizontally. """
+        # drift
         self.rect.y += self.speedy
         self.rect.x += self.speedx
 
-        # Bounce off the sides
+        # bounce off walls
         if self.rect.right > SCREEN_WIDTH or self.rect.left < 0:
             self.speedx = -self.speedx
-            # Clamp position to prevent getting stuck off-screen
-            if self.rect.right > SCREEN_WIDTH: self.rect.right = SCREEN_WIDTH
-            if self.rect.left < 0: self.rect.left = 0
+            self.rect.right = min(self.rect.right, SCREEN_WIDTH)
+            self.rect.left  = max(self.rect.left, 0)
 
-        # Kill if it moves off the bottom of the screen
-        if self.rect.top > SCREEN_HEIGHT + 10: # Add a small buffer
+        # **Kill as soon as it’s fully off-screen**
+        if self.rect.top > SCREEN_HEIGHT:
             self.kill()
 
 
+
 class EnemyBoss(pygame.sprite.Sprite):
-    """ Represents the Boss enemy. """
-    # --- MODIFIED: Accept sprite groups, use settings constants ---
+    """Big boss: enters from top, patrols horizontally, shoots, and can take damage."""
     def __init__(self, boss_img, shoot_sound, all_sprites_group, enemy_bullets_group):
         super().__init__()
         self.image_orig = boss_img
-        self.image = self.image_orig.copy()
+        self.image = boss_img.copy()
         self.rect = self.image.get_rect()
         self.rect.centerx = SCREEN_WIDTH // 2
-        self.rect.bottom = -20 # Start above screen
+        self.rect.bottom = -20      # start off-screen
 
-        # Use constants from settings
-        self.entry_speedy = 1 # Can be made a setting if needed BOSS_ENTRY_SPEED_Y
-        self.entry_y = BOSS_ENTRY_Y
-        self.speedx = BOSS_SPEED_X
-        self.entered = False
+        # entry vs. patrol
+        self.entry_speedy = 1
+        self.entry_y      = BOSS_ENTRY_Y
+        self.speedx       = BOSS_SPEED_X
+        self.entered      = False
 
-        self.max_health = BOSS_MAX_HEALTH
-        self.health = self.max_health
-
-        self.shoot_delay = BOSS_SHOOT_DELAY
+        # health & shooting
+        self.max_health    = BOSS_MAX_HEALTH
+        self.health        = self.max_health
+        self.shoot_delay   = BOSS_SHOOT_DELAY
         self.last_shot_time = pygame.time.get_ticks()
-        self.shoot_sound = shoot_sound
+        self.shoot_sound    = shoot_sound
 
-        self.all_sprites = all_sprites_group
-        self.enemy_bullets = enemy_bullets_group
+        # groups
+        self.all_sprites    = all_sprites_group
+        self.enemy_bullets  = enemy_bullets_group
+
+        # **immediately add self to the master group**
+        self.all_sprites.add(self)
 
     def update(self):
-        """ Handles Boss entry, movement, and shooting checks. """
         now = pygame.time.get_ticks()
 
+        # entry phase
         if not self.entered:
             if self.rect.centery < self.entry_y:
                 self.rect.y += self.entry_speedy
             else:
-                self.rect.centery = self.entry_y # Snap to final Y
+                self.rect.centery = self.entry_y
                 self.entered = True
-                self.last_shot_time = now # Start shooting timer only after entry
-                print("Boss entry complete. Engaging!")
+                self.last_shot_time = now
         else:
-            # Horizontal movement
+            # horizontal patrol
             self.rect.x += self.speedx
             if self.rect.right >= SCREEN_WIDTH or self.rect.left <= 0:
                 self.speedx = -self.speedx
-                # Clamp position after bounce
-                self.rect.x = max(0, min(self.rect.x, SCREEN_WIDTH - self.rect.width))
+                self.rect.right = min(self.rect.right, SCREEN_WIDTH)
+                self.rect.left  = max(self.rect.left, 0)
 
-            # Shooting Logic
+            # time to shoot?
             if now - self.last_shot_time > self.shoot_delay:
                 self.shoot()
                 self.last_shot_time = now
 
     def shoot(self):
-        """ Creates enemy bullet(s) and adds them to groups. """
-        # print("Boss shooting!") # Reduced frequency log
-        bullet_spawn_x = self.rect.centerx
-        bullet_spawn_y = self.rect.bottom
-
-        enemy_bullet = EnemyBullet(bullet_spawn_x, bullet_spawn_y)
-        self.all_sprites.add(enemy_bullet)
-        self.enemy_bullets.add(enemy_bullet)
-
+        bullet = EnemyBullet(self.rect.centerx, self.rect.bottom)
+        self.all_sprites.add(bullet)
+        self.enemy_bullets.add(bullet)
         if self.shoot_sound:
-             try:
-                 self.shoot_sound.play()
-             except pygame.error as e:
-                 print(f"Warning: Could not play boss shoot sound: {e}")
+            try:
+                self.shoot_sound.play()
+            except pygame.error:
+                pass
 
+    def take_damage(self, damage):
+        """Reduce health, play sound, and kill if at 0."""
+        self.health -= damage
+        if self.health > 0:
+            if self.shoot_sound:
+                self.shoot_sound.play()
+        else:
+            if self.shoot_sound:
+                self.shoot_sound.play()
+            self.kill()
 
     def draw_health_bar(self, surf):
-        """ Draws the boss's health bar above it onto the provided surface. """
-        if self.health > 0:
-            bar_length = 100
-            bar_height = 10
-            fill_percent = max(0, self.health / self.max_health)
-            fill_length = int(bar_length * fill_percent)
-            outline_rect = pygame.Rect(self.rect.centerx - bar_length // 2,
-                                       self.rect.top - bar_height - 5, # Padding above
-                                       bar_length, bar_height)
-            fill_rect = pygame.Rect(outline_rect.left, outline_rect.top,
-                                    fill_length, bar_height)
-            # Draw background (red), fill (green), and border (white)
-            pygame.draw.rect(surf, RED, outline_rect)
-            pygame.draw.rect(surf, GREEN, fill_rect)
-            pygame.draw.rect(surf, WHITE, outline_rect, 2) # Border thickness 2
+        if self.health <= 0:
+            return
+        bar_length = 100
+        bar_height = 10
+        x = self.rect.left
+        y = self.rect.top - bar_height - 5
+
+        # border
+        pygame.draw.rect(surf, BLACK, (x-1, y-1, bar_length+2, bar_height+2), 1)
+        # background
+        pygame.draw.rect(surf, RED,   (x,   y,   bar_length,    bar_height))
+        # fill
+        fill = int(self.health / self.max_health * bar_length)
+        pygame.draw.rect(surf, GREEN, (x,   y,   fill,          bar_height))

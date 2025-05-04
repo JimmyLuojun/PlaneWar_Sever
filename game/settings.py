@@ -1,4 +1,4 @@
-# /Users/junluo/Desktop/PlaneWar/settings.py
+# /Users/junluo/Desktop/PlaneWar_Sever/game/settings.py
 import pygame
 import os
 
@@ -33,10 +33,10 @@ BOSS_EXPLODE_SOUND_PATH = os.path.join(SND_DIR, "big_explosion.wav")
 POWERUP_PICKUP_SOUND_PATH = os.path.join(SND_DIR, "small_powerup.wav")
 WIN_SOUND_PATH = os.path.join(SND_DIR, "win.wav")
 LOSE_SOUND_PATH = os.path.join(SND_DIR, "lose.wav")
-BOSS_INTRO_SOUND_PATH = os.path.join(SND_DIR, "boss_intro.mp3")
+BOSS_INTRO_SOUND_PATH = os.path.join(SND_DIR, "boss_intro.wav")
 BOSS_HIT_SOUND_PATH = os.path.join(SND_DIR, "boss_hit.mp3")
 Default_BGM_PATH = os.path.join(SND_DIR, "Dynamedion GbR - 危险_SQ.flac")
-SHIELD_UP_SOUND_PATH = os.path.join(SND_DIR, "shield_up.mp3")
+SHIELD_UP_SOUND_PATH = os.path.join(SND_DIR, "shield_up.wav")
 SHIELD_DOWN_SOUND_PATH = os.path.join(SND_DIR, "shield_down.mp3")
 BOMB_SOUND_PATH = os.path.join(SND_DIR, "bomb_explode.wav")
 BOSS_SHOOT_SOUND_PATH = os.path.join(SND_DIR, "boss_shoot.wav")
@@ -68,7 +68,9 @@ ENEMY_BULLET_WIDTH = 8
 ENEMY_BULLET_HEIGHT = 15
 
 # --- Game Constants (Defaults / Global) ---
-BULLET_SPEED = 10
+PLAYER_SHOOT_DELAY = 150
+BULLET_SPEED = 10             # <<< --- ADDED THIS LINE (Player bullet speed) --- >>>
+ENEMY_SHOOT_DELAY = 500     # Delay (ms) between enemy shots
 ENEMY_SPAWN_INTERVAL = 60
 ENEMY_MIN_SPEED_Y = 1
 ENEMY_MAX_SPEED_Y = 4
@@ -79,13 +81,12 @@ MAX_ONSCREEN_ENEMIES = 15
 BOSS_SPAWN_SCORE = 99999
 BOSS_ENTRY_Y = 100
 BOSS_SPEED_X = 3
+BOSS_SPEED_Y = 1           # Vertical speed for the boss (if used)
 BOSS_SHOOT_DELAY = 1500
 BOSS_MAX_HEALTH = 50
 ENEMY_BULLET_SPEED_Y = 6
 
 STARTUP_GRACE_PERIOD = 1500
-PLAYER_SHOOT_DELAY = 150
-# *** ADDED: Starting bombs constant ***
 PLAYER_STARTING_BOMBS = 3 # Define how many bombs the player starts with
 POWERUP_SPAWN_INTERVAL = 8000
 POWERUP_DURATION = 5000
@@ -124,7 +125,7 @@ SHIELD_VISUAL_COLOR = (*CYAN, 100) # Tuple unpacking to add alpha
 # --- Mixer Settings ---
 MIXER_FREQUENCY = 44100
 MIXER_SIZE = -16
-MIXER_CHANNELS = 2
+MIXER_CHANNELS = 32
 MIXER_BUFFER = 512
 
 # --- Sound Volumes ---
@@ -144,3 +145,12 @@ BGM_VOLUME = 0.3
 
 # --- High Score File Path ---
 HIGH_SCORE_FILE_PATH = os.path.join(BASE_DIR, "highscore.txt")
+
+# --- Server API URL ---
+# Define the base URL for the Flask server API
+# Make sure the port matches the one your Flask server is running on!
+SERVER_API_URL = "http://127.0.0.1:5000/api" # Default development URL
+
+# --- Enemy Settings ---
+ENEMY_SPAWN_RANGE_Y = (50, 200)
+

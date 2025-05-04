@@ -2,7 +2,7 @@
 import requests
 import json
 # Assume settings.py is in the same directory or adjust import path
-from .settings import SERVER_API_URL
+from .settings import SERVER_API_URL # This relative import is correct
 
 def api_login_user(username, password):
     """

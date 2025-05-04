@@ -1,7 +1,5 @@
-# /Users/junluo/Desktop/桌面文件/PlaneWar_Sever/server/views.py
-from curses import flash
-from flask import Blueprint, render_template, redirect, url_for, request
-from flask_login import current_user # Import current_user
+from flask import Blueprint, render_template, redirect, url_for, request, flash
+from flask_login import current_user, login_required
 from .models import Score, User
 from .extensions import db
 
@@ -20,28 +18,28 @@ def leaderboard():
     """Displays the main leaderboard web page with pagination."""
     try:
         page = request.args.get('page', 1, type=int)
-        per_page = 20 # Number of scores per page
+        per_page = 20  # Number of scores per page
 
         # Query scores joined with username, ordered by score descending
-        # Using paginate for easy page handling
         scores_pagination = db.session.query(Score, User.username)\
                                       .join(User, Score.user_id == User.id)\
                                       .order_by(Score.score_value.desc())\
                                       .paginate(page=page, per_page=per_page, error_out=False)
 
-        # Calculate rank offset for the current page items
-        # Rank of the first item on the page = (page - 1) * per_page + 1
         rank_offset = (scores_pagination.page - 1) * scores_pagination.per_page
 
         return render_template('leaderboard.html',
                                title="Leaderboard",
-                               scores_data=scores_pagination.items, # List of (Score, username) tuples
-                               pagination=scores_pagination, # Pagination object for controls
-                               rank_offset=rank_offset) # To display correct rank number
+                               scores_data=scores_pagination.items,
+                               pagination=scores_pagination,
+                               rank_offset=rank_offset)
 
     except Exception as e:
-        print(f"Error rendering leaderboard view: {e}")
-        # Optional: Show an error page
-        # return render_template('error.html', message="Could not load leaderboard"), 500
         flash("Error loading leaderboard.", "danger")
-        return redirect(url_for('auth.login')) # Redirect somewhere sensible
+        return redirect(url_for('auth.login'))
+
+@bp.route('/game')
+@login_required  # Ensure the user is logged in before they can play the game
+def game():
+    """Renders the game page where the user can play."""
+    return render_template('game.html')  # Assuming you have a 'game.html' template for the game interface
