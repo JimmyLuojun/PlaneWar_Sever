@@ -45,7 +45,7 @@ poetry run flask run
 
 2. Run the game client:
 ```bash
-poetry run python game/main.py
+poetry run python -m game.main
 ```
 
 ## Features
