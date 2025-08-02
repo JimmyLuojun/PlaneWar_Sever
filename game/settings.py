@@ -155,7 +155,7 @@ HIGH_SCORE_FILE_PATH = os.path.join(BASE_DIR, "highscore.txt")
 # --- Server API URL ---
 # Define the base URL for the Flask server API
 # Make sure the port matches the one your Flask server is running on!
-SERVER_API_URL = "http://127.0.0.1:5000/api" # Default development URL
+SERVER_API_URL = "http://127.0.0.1:8000/api" # Updated to match server port
 
 # --- Enemy Settings ---
 ENEMY_SPAWN_RANGE_Y = (50, 200)

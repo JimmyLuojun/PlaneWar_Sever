@@ -12,6 +12,11 @@ from .settings import SERVER_API_URL # Use the correct URL from your settings
 
 # --- Create the persistent session object at the module level ---
 api_session = requests.Session()
+# Configure session to bypass proxy for localhost
+api_session.proxies = {
+    'http': None,
+    'https': None
+}
 # -------------------------------------------------------------
 
 # --- Store login status within this module ---
