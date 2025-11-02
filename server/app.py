@@ -89,3 +89,11 @@ def create_app(config_class=None, config_override=None):
     print(f"Database URI: {app.config.get('SQLALCHEMY_DATABASE_URI')}")
 
     return app
+
+if __name__ == '__main__':
+    # Create the app instance using the factory
+    app = create_app()
+    # Run the development server
+    print("Starting Flask server on http://localhost:8000")
+    print("Press Ctrl+C to stop the server")
+    app.run(host='0.0.0.0', port=8000, debug=True)
