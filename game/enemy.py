@@ -154,6 +154,8 @@ class EnemyBoss(pygame.sprite.Sprite):
         target_player=False,
         player_ref=None,
         fire_rate_multiplier=1.0,
+        shot_count: int = 1,
+        shot_spread_degrees: float = 0.0,
     ):
         """
         Initialize the boss enemy.
@@ -193,6 +195,16 @@ class EnemyBoss(pygame.sprite.Sprite):
         # Targeting system
         self.target_player = target_player
         self.player_ref = player_ref if target_player else None
+
+        # Shooting pattern
+        try:
+            self.shot_count = max(1, int(shot_count))
+        except Exception:
+            self.shot_count = 1
+        try:
+            self.shot_spread_degrees = float(shot_spread_degrees)
+        except Exception:
+            self.shot_spread_degrees = 0.0
 
         self.all_sprites.add(self)
 
@@ -237,9 +249,34 @@ class EnemyBoss(pygame.sprite.Sprite):
             )
 
         # Create and add bullet
-        bullet = EnemyBullet(shoot_pos.x, shoot_pos.y, direction=direction)
-        self.all_sprites.add(bullet)
-        self.enemy_bullets.add(bullet)
+        # Create one or multiple bullets (spread around base direction)
+        if self.shot_count <= 1 or abs(self.shot_spread_degrees) < 1e-3:
+            bullet = EnemyBullet(shoot_pos.x, shoot_pos.y, direction=direction)
+            self.all_sprites.add(bullet)
+            self.enemy_bullets.add(bullet)
+        else:
+            # Centered spread: e.g., 3 with 20deg -> angles [-20, 0, 20]
+            total = self.shot_count
+            if total % 2 == 1:
+                # odd count: include 0 and symmetric pairs
+                mids = [0]
+                pairs = (total - 1) // 2
+                for i in range(1, pairs + 1):
+                    angle = self.shot_spread_degrees * i
+                    mids.extend([-angle, angle])
+                angles = mids
+            else:
+                # even count: symmetric pairs around 0, offset by half-step
+                pairs = total // 2
+                angles = []
+                for i in range(1, pairs + 1):
+                    angle = self.shot_spread_degrees * (i - 0.5)
+                    angles.extend([-angle, angle])
+            for ang in angles:
+                dir_vec = direction.rotate(ang)
+                b = EnemyBullet(shoot_pos.x, shoot_pos.y, direction=dir_vec)
+                self.all_sprites.add(b)
+                self.enemy_bullets.add(b)
 
         # Play sound effect
         if self.shoot_sound:

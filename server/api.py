@@ -11,10 +11,14 @@ The current implementation relying on user_id sent by the client is INSECURE.
 """
 
 from flask import Blueprint, jsonify, request
-from flask_login import login_user, logout_user
+from flask_login import login_user, logout_user, current_user
 
 from .extensions import db
 from .models import Score, User
+from .progress_store import (
+    get_max_unlocked_level_for_user,
+    set_max_unlocked_level_for_user,
+)
 
 
 # Constants
@@ -75,6 +79,10 @@ def api_submit_score():
     score_value = data.get("score")
     level_value = data.get("level")
 
+    # Support session-based auth as well: if user_id not provided, use current_user
+    if user_id is None and current_user.is_authenticated:
+        user_id = current_user.id
+
     if user_id is None or score_value is None or level_value is None:
         return (
             jsonify({"success": False, "message": "Missing user_id, score, or level"}),
@@ -127,3 +135,38 @@ def api_submit_score():
             jsonify({"success": False, "message": "Database error saving score"}),
             500,
         )
+
+
+@bp.route("/progress", methods=["GET"])
+def api_get_progress():
+    """Return the authenticated user's max unlocked level."""
+    if not current_user.is_authenticated:
+        return jsonify({"success": False, "message": "Not authenticated"}), 401
+    try:
+        max_level = get_max_unlocked_level_for_user(current_user.id)
+        return jsonify({"success": True, "max_unlocked_level": int(max_level)})
+    except Exception:
+        return jsonify({"success": False, "message": "Progress read error"}), 500
+
+
+@bp.route("/progress", methods=["POST"])
+def api_set_progress():
+    """Set the authenticated user's max unlocked level.
+
+    Expects JSON: {"max_unlocked_level": int}
+    """
+    if not current_user.is_authenticated:
+        return jsonify({"success": False, "message": "Not authenticated"}), 401
+    if not request.is_json:
+        return jsonify({"success": False, "message": "Request must be JSON"}), 415
+    data = request.get_json() or {}
+    value = data.get("max_unlocked_level")
+    try:
+        new_val = int(value)
+    except Exception:
+        return jsonify({"success": False, "message": "Invalid value"}), 400
+    try:
+        stored = set_max_unlocked_level_for_user(current_user.id, new_val)
+        return jsonify({"success": True, "max_unlocked_level": int(stored)})
+    except Exception:
+        return jsonify({"success": False, "message": "Progress write error"}), 500

@@ -190,6 +190,8 @@ def run_game(
                             target_player=boss_targets_player_flag,
                             player_ref=player,
                             fire_rate_multiplier=boss_fire_rate_multiplier,
+                            shot_count=int(level_data.get("boss_shot_count", 1)),
+                            shot_spread_degrees=float(level_data.get("boss_shot_spread_degrees", 0.0)),
                         )
                         boss_group.add(boss_instance)
                         boss_active = True

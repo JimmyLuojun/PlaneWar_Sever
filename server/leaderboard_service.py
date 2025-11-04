@@ -2,8 +2,14 @@
 
 Encapsulates database queries and logic for generating ranked leaderboards.
 Provides functions to get top scores overall, top scores per level, and
-the distinct levels available, handling tie-breaking logic where necessary.
+the list of available levels. Levels can be sourced from the database
+(distinct levels with scores) and from the local game level files to ensure
+the UI shows all created levels even if they have no scores yet.
 """
+
+import os
+import re
+from typing import List
 
 from sqlalchemy import asc, desc, distinct, func
 
@@ -173,7 +179,46 @@ def get_overall_leaderboard():
     return leaderboard
 
 
-def get_distinct_levels():
-    """Gets a sorted list of distinct level numbers that have scores."""
+def _get_levels_from_files() -> List[int]:
+    """Scan game/levels directory to list available level numbers.
+
+    Returns:
+        Sorted list of level numbers found in game/levels (e.g., level_3.json -> 3).
+    """
+    try:
+        repo_root = os.path.dirname(os.path.dirname(__file__))
+        levels_dir = os.path.join(repo_root, "game", "levels")
+        if not os.path.isdir(levels_dir):
+            return []
+        levels: List[int] = []
+        pattern = re.compile(r"level_(\d+)\.json$")
+        for name in os.listdir(levels_dir):
+            m = pattern.match(name)
+            if m:
+                try:
+                    levels.append(int(m.group(1)))
+                except ValueError:
+                    continue
+        return sorted(set(levels))
+    except Exception:
+        return []
+
+
+def get_available_levels() -> List[int]:
+    """Return available levels for the leaderboard filter.
+
+    Combines levels that have any scores (from DB) with levels detected
+    from local game level files so that the UI can show all created levels,
+    even those without scores yet.
+    """
+    db_levels = db.session.query(Score.level).distinct().order_by(Score.level.asc()).all()
+    db_level_numbers = [level[0] for level in db_levels]
+    file_level_numbers = _get_levels_from_files()
+    merged = sorted(set(db_level_numbers) | set(file_level_numbers))
+    return merged
+
+
+def get_distinct_levels() -> List[int]:
+    """Backwards-compatible: return only levels present in the DB (with scores)."""
     levels = db.session.query(Score.level).distinct().order_by(Score.level.asc()).all()
     return [level[0] for level in levels]

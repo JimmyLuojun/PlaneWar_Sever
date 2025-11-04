@@ -1,5 +1,10 @@
 """Tests for game/ui.py - UI screen rendering and input handling."""
 
+import os
+# Set SDL to dummy mode BEFORE importing pygame
+os.environ['SDL_VIDEODRIVER'] = 'dummy'
+os.environ['SDL_AUDIODRIVER'] = 'dummy'
+
 import pytest
 from unittest.mock import patch, Mock
 import pygame
@@ -19,9 +24,11 @@ class TestShowLoginScreen:
         mock_fonts = {'medium': Mock(), 'small': Mock()}
         mock_client = Mock()
 
-        result = ui.show_login_screen(mock_screen, mock_fonts, mock_client)
+        action, username, message = ui.show_login_screen(mock_screen, mock_fonts, mock_client)
 
-        assert result == 'QUIT'
+        assert action == 'QUIT'
+        assert username is None
+        assert message == 'User quit'
 
     @patch('pygame.event.get')
     @patch('pygame.display.flip')
@@ -33,9 +40,10 @@ class TestShowLoginScreen:
         mock_fonts = {'medium': Mock(), 'small': Mock()}
         mock_client = Mock()
 
-        result = ui.show_login_screen(mock_screen, mock_fonts, mock_client)
+        action, username, message = ui.show_login_screen(mock_screen, mock_fonts, mock_client)
 
-        assert result == 'QUIT'
+        assert action == 'QUIT'
+        assert username is None
 
     @patch('pygame.event.get')
     @patch('pygame.display.flip')
@@ -51,9 +59,9 @@ class TestShowLoginScreen:
         mock_fonts = {'medium': Mock(), 'small': Mock()}
         mock_client = Mock()
 
-        result = ui.show_login_screen(mock_screen, mock_fonts, mock_client)
+        action, username, message = ui.show_login_screen(mock_screen, mock_fonts, mock_client)
 
-        assert result == 'QUIT'
+        assert action == 'QUIT'
 
     @patch('pygame.mouse.get_pos', return_value=(400, 450))
     @patch('pygame.event.get')
@@ -64,6 +72,7 @@ class TestShowLoginScreen:
         """Test login screen handles successful login."""
         mock_login_result = Mock()
         mock_login_result.success = True
+        mock_login_result.username = 'testuser'
         mock_client = Mock()
         mock_client.login.return_value = mock_login_result
 
@@ -78,39 +87,46 @@ class TestShowLoginScreen:
         mock_screen = Mock()
         mock_fonts = {'medium': Mock(), 'small': Mock()}
 
-        result = ui.show_login_screen(mock_screen, mock_fonts, mock_client)
+        action, username, message = ui.show_login_screen(mock_screen, mock_fonts, mock_client)
 
-        assert result == 'LOGIN_SUCCESS'
+        assert action == 'LOGIN_SUCCESS'
+        assert username == 'testuser'
+        assert message == 'Login successful'
 
 
 class TestShowStartScreen:
     """Tests for show_start_screen function."""
 
+    @patch('game.progress.get_max_unlocked_level', return_value=3)
     @patch('pygame.event.get')
     @patch('pygame.display.flip')
     @patch('pygame.time.Clock')
-    def test_show_start_screen_quit_event(self, mock_clock, mock_flip, mock_event):
+    def test_show_start_screen_quit_event(self, mock_clock, mock_flip, mock_event, mock_progress):
         """Test start screen handles quit event."""
         mock_event.return_value = [pygame.event.Event(pygame.QUIT)]
         mock_screen = Mock()
-        mock_fonts = {'large': Mock(), 'medium': Mock()}
+        mock_fonts = {'large': Mock(), 'medium': Mock(), 'title': Mock(), 'small': Mock()}
 
         result = ui.show_start_screen(mock_screen, mock_fonts)
 
         assert result == 'QUIT'
 
+    @patch('game.progress.get_max_unlocked_level', return_value=3)
+    @patch('pygame.mouse.get_pos', return_value=(400, 300))
     @patch('pygame.event.get')
     @patch('pygame.display.flip')
     @patch('pygame.time.Clock')
-    def test_show_start_screen_any_key_continues(self, mock_clock, mock_flip, mock_event):
-        """Test start screen continues on any key press."""
-        mock_event.return_value = [pygame.event.Event(pygame.KEYDOWN, {'key': pygame.K_SPACE})]
+    def test_show_start_screen_any_key_continues(self, mock_clock, mock_flip, mock_event, mock_mouse, mock_progress):
+        """Test start screen level selection."""
+        # Simulate clicking on a level button (approximate position)
+        mock_event.return_value = [pygame.event.Event(pygame.MOUSEBUTTONDOWN, {'button': 1, 'pos': (400, 300)})]
         mock_screen = Mock()
-        mock_fonts = {'large': Mock(), 'medium': Mock()}
+        mock_fonts = {'large': Mock(), 'medium': Mock(), 'title': Mock(), 'small': Mock()}
 
         result = ui.show_start_screen(mock_screen, mock_fonts)
 
-        assert result == 'START'
+        # Result should be LEVEL_X format
+        assert result.startswith('LEVEL_')
 
 
 class TestShowEndScreen:

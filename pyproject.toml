@@ -50,9 +50,49 @@ ruff = "^0.4.4" # Keep your linter/formatter
 pytest = "^8.3.5"
 pytest-mock = "^3.14.0"
 requests-mock = "^1.12.1"
+pytest-cov = "^7.0.0"
 [tool.poetry.scripts]
 run-planewar-game = "game.main:main"
 run-planewar-server = "server.app:run_dev_server" # Assumes run_dev_server func in server/app.py
+
+# --- Pytest Configuration ---
+[tool.pytest.ini_options]
+# Automatically run with coverage
+addopts = [
+    "--cov=game",
+    "--cov=server",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+    "-v"
+]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+
+# --- Coverage Configuration ---
+[tool.coverage.run]
+source = ["game", "server"]
+omit = [
+    "*/tests/*",
+    "*/__pycache__/*",
+    "*/venv/*",
+    "*/.venv/*",
+]
+
+[tool.coverage.report]
+precision = 2
+show_missing = true
+skip_covered = false
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "@abstractmethod",
+]
 
 # --- Build System Configuration ---
 [build-system]

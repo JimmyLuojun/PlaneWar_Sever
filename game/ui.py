@@ -225,7 +225,7 @@ def show_login_screen(
     fonts: dict,
     network_client: NetworkClient,
     previous_message: Optional[str] = None,
-) -> str:
+) -> tuple[str, str | None, str]:
     """Display the login screen, handle input, and attempt API login.
 
     Args:
@@ -415,7 +415,7 @@ def show_login_screen(
 
     # Handle return logic after loop exit
     if quit_flag:
-        return "QUIT"
+        return "QUIT", None, "User quit"
 
     if login_triggered:
         # Attempt network login
@@ -424,13 +424,13 @@ def show_login_screen(
 
         if result.success:
             print(f"UI: Login successful for {result.username}")
-            return "LOGIN_SUCCESS"
+            return "LOGIN_SUCCESS", result.username, "Login successful"
         else:
             print(f"UI: Login failed - {result.message}")
-            return "LOGIN_FAIL"
+            return "LOGIN_FAIL", None, result.message
 
     # Fallback (should not normally reach here)
-    return "QUIT"
+    return "QUIT", None, "User quit"
 
 
 def show_start_screen(
@@ -438,75 +438,122 @@ def show_start_screen(
     fonts: dict,
     logged_in_username: Optional[str] = None,
 ) -> str:
-    """Display the start screen and wait for user input.
+    """Display the start screen with level selection and wait for user input.
 
     Args:
         screen_surf: The Pygame screen surface
-        clock_obj: The Pygame clock object
         fonts: Dictionary of loaded fonts
-        high_score: The current high score to display
         logged_in_username: Username of logged-in user (if any)
 
     Returns:
-        'START' to begin game, or 'QUIT' to exit
+        'LEVEL_X' where X is the selected level number, or 'QUIT' to exit
     """
+    from . import progress  # Import here to avoid circular dependency
+
     font_title = fonts.get("title") or pygame.font.SysFont(None, FONT_SIZE_TITLE)
-    font_score = fonts.get("score") or pygame.font.SysFont(None, FONT_SIZE_SCORE)
+    font_medium = fonts.get("medium") or pygame.font.SysFont(None, FONT_SIZE_SCORE)
+    font_small = fonts.get("small") or pygame.font.SysFont(None, FONT_SIZE_SCORE - 4)
 
-    screen_surf.fill(BLACK)
+    # Load progress
+    max_unlocked_level = progress.get_max_unlocked_level()
 
-    try:
-        cx = SCREEN_WIDTH // 2
+    # Calculate button layout
+    cx = SCREEN_WIDTH // 2
+    button_width = 80
+    button_height = 50
+    button_spacing = 20
+    buttons_per_row = 5
 
-        # Draw logged-in username (if applicable)
-        if logged_in_username:
-            user_surf = font_score.render(
-                f"Logged in as: {logged_in_username}", True, CYAN
-            )
-            screen_surf.blit(
-                user_surf,
-                user_surf.get_rect(
-                    center=(cx, int(SCREEN_HEIGHT * START_USER_Y_RATIO))
-                ),
-            )
+    # Create level buttons
+    level_buttons = []
+    for level_num in range(1, max_unlocked_level + 1):
+        row = (level_num - 1) // buttons_per_row
+        col = (level_num - 1) % buttons_per_row
 
-        # Draw title
-        title_surf = font_title.render(START_TITLE_TEXT, True, WHITE)
-        screen_surf.blit(
-            title_surf,
-            title_surf.get_rect(center=(cx, int(SCREEN_HEIGHT * START_TITLE_Y_RATIO))),
-        )
+        # Center the row of buttons
+        total_width = min(max_unlocked_level, buttons_per_row) * (button_width + button_spacing) - button_spacing
+        start_x = cx - total_width // 2
 
-        # Draw high score
-        score_surf = font_score.render(f"High Score: {high_score}", True, WHITE)
-        screen_surf.blit(
-            score_surf,
-            score_surf.get_rect(center=(cx, int(SCREEN_HEIGHT * START_SCORE_Y_RATIO))),
-        )
+        x = start_x + col * (button_width + button_spacing)
+        y = 280 + row * (button_height + button_spacing)
 
-        # Draw prompt
-        prompt_surf = font_score.render(START_PROMPT_TEXT, True, YELLOW)
-        screen_surf.blit(
-            prompt_surf,
-            prompt_surf.get_rect(
-                center=(cx, int(SCREEN_HEIGHT * START_PROMPT_Y_RATIO))
-            ),
-        )
-    except Exception as e:
-        print(f"Error rendering start screen: {e}")
+        button_rect = pygame.Rect(x, y, button_width, button_height)
+        level_buttons.append((level_num, button_rect))
 
-    pygame.display.flip()
-
-    # Wait for key press or quit
+    # Main loop
     waiting = True
     clock_obj = pygame.time.Clock()
+    mouse_pos = (0, 0)
+
     while waiting:
         clock_obj.tick(FPS)
+        mouse_pos = pygame.mouse.get_pos()
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 return "QUIT"
-            if event.type == pygame.KEYDOWN or event.type == pygame.MOUSEBUTTONDOWN:
-                return "START"
+
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    return "QUIT"
+
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 1:  # Left click
+                    # Check if any level button was clicked
+                    for level_num, button_rect in level_buttons:
+                        if button_rect.collidepoint(event.pos):
+                            return f"LEVEL_{level_num}"
+
+        # Rendering
+        screen_surf.fill(BLACK)
+
+        try:
+            # Draw logged-in username
+            if logged_in_username:
+                user_surf = font_small.render(
+                    f"Logged in as: {logged_in_username}", True, CYAN
+                )
+                screen_surf.blit(user_surf, user_surf.get_rect(center=(cx, 30)))
+
+            # Draw title
+            title_surf = font_title.render("PLANE WAR", True, WHITE)
+            screen_surf.blit(title_surf, title_surf.get_rect(center=(cx, 100)))
+
+            # Draw subtitle
+            subtitle_surf = font_medium.render("Select Level", True, YELLOW)
+            screen_surf.blit(subtitle_surf, subtitle_surf.get_rect(center=(cx, 180)))
+
+            # Draw unlocked levels info
+            info_surf = font_small.render(
+                f"Unlocked: Levels 1 - {max_unlocked_level}", True, GREEN
+            )
+            screen_surf.blit(info_surf, info_surf.get_rect(center=(cx, 220)))
+
+            # Draw level buttons
+            for level_num, button_rect in level_buttons:
+                # Check if mouse is hovering
+                is_hovered = button_rect.collidepoint(mouse_pos)
+                button_color = GREEN if is_hovered else (50, 100, 50)
+
+                # Draw button background
+                pygame.draw.rect(screen_surf, button_color, button_rect, border_radius=8)
+                pygame.draw.rect(screen_surf, WHITE, button_rect, 2, border_radius=8)
+
+                # Draw level number
+                level_text = font_medium.render(str(level_num), True, WHITE)
+                screen_surf.blit(
+                    level_text,
+                    level_text.get_rect(center=button_rect.center)
+                )
+
+            # Draw instructions
+            inst_surf = font_small.render("Click a level to start | ESC to quit", True, WHITE)
+            screen_surf.blit(inst_surf, inst_surf.get_rect(center=(cx, SCREEN_HEIGHT - 50)))
+
+        except Exception as e:
+            print(f"Error rendering start screen: {e}")
+
+        pygame.display.flip()
 
     return "QUIT"  # Fallback
 

@@ -117,6 +117,15 @@ class LogoutResult:
     message: str
 
 
+@dataclass
+class ProgressResult:
+    """Result for fetching/updating user progress (max unlocked level)."""
+
+    success: bool
+    max_unlocked_level: Optional[int]
+    message: str
+
+
 # ============================================================================
 # Concrete Classes
 # ============================================================================
@@ -303,7 +312,10 @@ class NetworkClient:
             return SubmitResult(success=False, message="Not authenticated")
 
         submit_url = f"{self.base_url}/submit_score"
+        # Server API currently expects user_id in the payload. Include it if available
         payload = {"score": score, "level": level}
+        if self.user_id is not None:
+            payload["user_id"] = self.user_id
 
         try:
             response = self.session.post(
@@ -371,6 +383,54 @@ class NetworkClient:
                 "Network Client: Error decoding server response during score submission."
             )
             return SubmitResult(success=False, message="Invalid server response")
+
+    # --------------------------------------------------------------------
+    # Progress (per-account unlocking)
+    # --------------------------------------------------------------------
+    def get_progress(self) -> ProgressResult:
+        """Fetch user's max unlocked level from the server."""
+        if not self.is_authenticated:
+            return ProgressResult(False, None, "Not authenticated")
+        url = f"{self.base_url}/progress"
+        try:
+            resp = self.session.get(url, timeout=REQUEST_TIMEOUT)
+            if resp.status_code == 401:
+                self._clear_auth_state()
+                return ProgressResult(False, None, "Not authenticated")
+            resp.raise_for_status()
+            data = resp.json()
+            if data.get("success"):
+                return ProgressResult(True, int(data.get("max_unlocked_level", 1)), "OK")
+            return ProgressResult(False, None, data.get("message", "Unknown error"))
+        except requests.exceptions.RequestException as e:
+            return ProgressResult(False, None, f"Network error: {e}")
+        except (ValueError, json.JSONDecodeError):
+            return ProgressResult(False, None, "Invalid server response")
+
+    def set_progress(self, max_unlocked_level: int) -> ProgressResult:
+        """Update user's max unlocked level on the server."""
+        if not self.is_authenticated:
+            return ProgressResult(False, None, "Not authenticated")
+        url = f"{self.base_url}/progress"
+        try:
+            resp = self.session.post(
+                url,
+                json={"max_unlocked_level": int(max_unlocked_level)},
+                headers=DEFAULT_HEADERS,
+                timeout=REQUEST_TIMEOUT,
+            )
+            if resp.status_code == 401:
+                self._clear_auth_state()
+                return ProgressResult(False, None, "Not authenticated")
+            resp.raise_for_status()
+            data = resp.json()
+            if data.get("success"):
+                return ProgressResult(True, int(data.get("max_unlocked_level", max_unlocked_level)), "OK")
+            return ProgressResult(False, None, data.get("message", "Unknown error"))
+        except requests.exceptions.RequestException as e:
+            return ProgressResult(False, None, f"Network error: {e}")
+        except (ValueError, json.JSONDecodeError):
+            return ProgressResult(False, None, "Invalid server response")
 
     def get_leaderboard(self, limit: int = 10) -> Optional[LeaderboardData]:
         """Fetch the leaderboard data from the server API.

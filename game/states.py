@@ -15,7 +15,7 @@ from typing import Any
 
 import pygame
 
-from . import ui, utils
+from . import ui, utils, progress
 from .loop import run_game
 from .network_client import NetworkClient
 from .settings import (
@@ -71,7 +71,7 @@ def run_state_machine(
         # --- State: LOGIN_SCREEN ---
         if game_state == STATE_LOGIN:
             login_action, username, status_msg = ui.show_login_screen(
-                screen, clock, fonts, network_client, last_login_message
+                screen, fonts, network_client, last_login_message
             )
             last_login_message = status_msg
 
@@ -80,6 +80,14 @@ def run_state_machine(
             elif login_action == "LOGIN_SUCCESS":
                 logged_in_username = username
                 print(f"Main: Login successful for {logged_in_username}")
+                # Fetch per-account progress from server and sync locally
+                try:
+                    if network_client.is_authenticated:
+                        p = network_client.get_progress()
+                        if p.success and p.max_unlocked_level:
+                            progress.save_progress(int(p.max_unlocked_level))
+                except Exception:
+                    pass
                 game_state = STATE_START
             elif login_action == "LOGIN_FAIL":
                 logged_in_username = None
@@ -92,12 +100,34 @@ def run_state_machine(
                 pygame.mixer.music.unload()
             current_music_path = None
 
-            ui.show_start_screen(screen, clock, fonts, high_score, logged_in_username)
-            current_level_index = 0
-            final_score_this_run = 0
-            last_level_played = 0
-            last_submission_status = None
-            game_state = STATE_LEVEL_START
+            # Show start screen with level selection
+            start_result = ui.show_start_screen(screen, fonts, logged_in_username)
+
+            if start_result == "QUIT":
+                app_running = False
+            elif start_result.startswith("LEVEL_"):
+                # Parse selected level number
+                try:
+                    selected_level = int(start_result.split("_")[1])
+                    # Find the index of the selected level in the levels list
+                    current_level_index = None
+                    for idx, level_data in enumerate(levels):
+                        if level_data.get("level_number") == selected_level:
+                            current_level_index = idx
+                            break
+
+                    if current_level_index is not None:
+                        print(f"Starting from Level {selected_level}")
+                        final_score_this_run = 0
+                        last_level_played = 0
+                        last_submission_status = None
+                        game_state = STATE_LEVEL_START
+                    else:
+                        print(f"Error: Level {selected_level} not found in loaded levels")
+                        game_state = STATE_START
+                except (ValueError, IndexError):
+                    print(f"Error: Invalid level selection format: {start_result}")
+                    game_state = STATE_START
 
         # --- State: LEVEL_START ---
         elif game_state == STATE_LEVEL_START:
@@ -141,7 +171,7 @@ def run_state_machine(
                         pygame.mixer.music.unload()
                     current_music_path = None
 
-                ui.show_level_start_screen(screen, clock, fonts, level_num)
+                ui.show_level_start_screen(screen, fonts, level_num, 2000)
                 game_state = STATE_RUNNING
             else:
                 print("Warning: Reached LEVEL_START with no more levels?")
@@ -193,6 +223,20 @@ def run_state_machine(
                     game_state = STATE_GAME_WON
                 else:
                     game_state = STATE_LEVEL_START
+                # Update unlock progress locally and on server
+                try:
+                    # Determine next unlocked level number (prefer explicit level numbers if present)
+                    available_level_numbers = [
+                        int(ld.get("level_number", i + 1)) for i, ld in enumerate(levels)
+                    ]
+                    max_available = max(available_level_numbers) if available_level_numbers else last_level_played
+                    candidate = min(last_level_played + 1, max_available)
+                    new_max = max(progress.get_max_unlocked_level(), candidate)
+                    progress.save_progress(new_max)
+                    if network_client.is_authenticated:
+                        network_client.set_progress(new_max)
+                except Exception:
+                    pass
             elif level_result == "FAILED":
                 if pygame.mixer and pygame.mixer.music.get_busy():
                     pygame.mixer.music.stop()
@@ -218,7 +262,6 @@ def run_state_machine(
         elif game_state == STATE_END:
             player_choice = ui.show_end_screen(
                 screen,
-                clock,
                 fonts,
                 game_result_for_screen,
                 final_score_this_run,

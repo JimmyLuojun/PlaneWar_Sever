@@ -12,7 +12,7 @@ from flask import Blueprint, abort, flash, redirect, render_template, request, u
 from flask_login import current_user, login_required
 
 from .leaderboard_service import (
-    get_distinct_levels,
+    get_available_levels,
     get_leaderboard_by_level,
     get_overall_leaderboard,
 )
@@ -39,7 +39,7 @@ def index():
 def leaderboard(level_num=None):
     """Displays the leaderboard, either overall or for a specific level (Top 30)."""
     try:
-        available_levels = get_distinct_levels()
+        available_levels = get_available_levels()
         leaderboard_data = []
         leaderboard_title = ""
         current_level_filter = "Overall"
