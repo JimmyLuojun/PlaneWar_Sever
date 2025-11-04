@@ -2,7 +2,8 @@
 Application state machine for PlaneWar.
 
 Encapsulates login, start, level-start, running, and end screens, handling
-music, score submission, and transitions. Applies the Event-Driven Standard Order.
+music, score submission, and transitions. Applies the Event‑Driven Standard
+Order at the application level.
 """
 
 # ==============================================================================
@@ -26,7 +27,7 @@ from .settings import (
 
 
 # ==============================================================================
-# Constants & Global Setup
+# Constants & State IDs
 # ==============================================================================
 STATE_LOGIN = "LOGIN_SCREEN"
 STATE_START = "START_SCREEN"
@@ -38,7 +39,7 @@ STATE_END = "END_SCREEN"
 
 
 # ==============================================================================
-# Orchestration Function (Core Logic)
+# State Machine (Event‑Driven Orchestration)
 # ==============================================================================
 def run_state_machine(
     screen: pygame.Surface,

@@ -2,11 +2,12 @@
 
 Defines the PowerUp sprite class for creating collectible items that
 fall from the top of the screen. Power-ups provide temporary enhancements
-like double shot, shield protection, or bomb powerups.
+like double shot, shield protection, or bomb powerups. Applies the OOP
+Standard Order within the module.
 """
 
 # ============================================================================
-# Imports
+# Imports (dependencies)
 # ============================================================================
 
 # Standard library

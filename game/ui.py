@@ -1,12 +1,12 @@
-"""Functions for displaying various UI screens and handling UI-specific input.
+"""UI screens and controllers for the PlaneWar client.
 
-Contains functions responsible for rendering and managing user interactions
-on non-gameplay screens like the login screen, start menu, game over/win screen,
-and level transition screens.
+Renders and manages user interactions on non-gameplay screens: login,
+start menu, end screen, and level transition screens. Applies the
+Event‑Driven Standard Order (handle events → update → draw → flip).
 """
 
 # ============================================================================
-# Imports
+# Imports (dependencies)
 # ============================================================================
 
 from typing import Optional, Tuple, Any
@@ -17,7 +17,7 @@ from .network_client import NetworkClient
 
 
 # ============================================================================
-# Constants
+# Constants & Layout
 # ============================================================================
 
 # --- Input Field Dimensions ---
@@ -216,7 +216,7 @@ def _determine_status_color(status: Optional[str]) -> Tuple[int, int, int]:
 
 
 # ============================================================================
-# Orchestration Functions (Core Logic)
+# Screen Controllers (Event Loops)
 # ============================================================================
 
 

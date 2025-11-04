@@ -1,48 +1,45 @@
-- always run codes via Poetry.
-- answer me with necessary content without redundant content.
-- this is the The Event_Driven Standard Order:""1. **Module docstring** (what this file does)
-2. **Imports** (dependencies)
-3. **Constants & Global Setup
-4. **Asset & Resource Loading**(A dedicated section (or function) to load all assets (images, sounds, fonts) into memory.)
-5. **Helper Functions** (module-level utilities)
-6. **Class & Object Definitions**(If using OOP) Define all "actors" or "widgets" here.
-7. **Core Application Initialization**(The code that "starts" the program and creates the main window or application object.)
-8. **Event Handler Functions (The "Callbacks")**(Not all handlers must be functions — in OOP designs, they can be _methods_ bound to objects)
-9. **Event Listeners / Bindings**(The "wiring" that connects a specific event to its handler function)
-10. **Main Event Loop (`while True` or `app.mainloop()`)**()""
-- this is the The Procedural Standard Order:""
-1. **Module docstring** (what this file does)
-2. **Imports** (dependencies)
-3. **Constants** (module-level configuration)
-4. **Helper Functions** (module-level utilities)
-5. **Orchestration Functions** (Core Logic)
-6. **Main Function** (The "Entry Point")
-7. **`if __name__ == "__main__":` Block""
-- this is the OOP Standard Order:""
-1. **Module docstring** (what this file does)
-2. **Imports** (dependencies)
-3. **Type Definitions** (NewTypes, TypeVars, Protocols)
-4. **Constants** (module-level configuration)
-5. **Exceptions** (custom error hierarchy)
-6. **[[Abstract Base Classes]]** (interfaces/protocols)
-7. **Data Classes** (simple data containers)
-8. **Helper Functions** (module-level utilities)
-9. **Concrete Classes** (implementations)
-    - Base classes first
-    - Subclasses after their parents
-    - Related classes together
-10. **Factory Functions** (class construction helpers)
-11. **Public API Functions** (convenience wrappers)
-12. **Main** (if it's a script)""
-- this is the Procedural Standard Order:""
-1. **Module docstring** (what this file does)
-2. **Imports** (dependencies)
-3. **Type Definitions** (if using [[Type Hints]])
-4. **Constants** (configuration)
-5. **[[Exceptions]]** (if custom errors)
-6. **[[Data Models]]** (if using dataclasses/models)
-7. **[[Helper Functions]]** (private utilities)
-8. **Core Logic** (main functionality)
-9. **Public API** (what users call)
-10. **Main** (if it's a script)""
-- when creating pytest codes for files, creating them by AAA pattern.
+Gemini Coding Standards
+
+This project uses shared conventions for structure and readability. When writing or refactoring code as Codex, follow these orders (mirroring CLAUDE.md) and keep changes minimal and well‑scoped.
+
+Event‑Driven Standard Order
+1) Module docstring (what this file does)
+2) Imports (dependencies)
+3) Constants & Global Setup
+4) Asset & Resource Loading (if applicable)
+5) Helper Functions (module‑level utilities)
+6) Type Definitions / Protocols (if used)
+7) Class & Object Definitions
+8) Event Handler Functions (callbacks)
+9) Event Listeners / Bindings (wiring)
+10) Main Event Loop (while loop / orchestration)
+
+Procedural Standard Order
+1) Module docstring
+2) Imports (dependencies)
+3) Constants
+4) Helper Functions
+5) Orchestration Functions (core logic)
+6) Main Function (entry point)
+7) if __name__ == "__main__" block
+
+OOP Standard Order
+1) Module docstring
+2) Imports (dependencies)
+3) Type Definitions (TypeVars, Protocols)
+4) Constants
+5) Exceptions
+6) Abstract Base Classes (interfaces)
+7) Data Classes
+8) Helper Functions
+9) Concrete Classes (base → subclasses)
+10) Factory Functions
+11) Public API Functions
+12) Main (if script)
+
+General Guidelines
+- Prefer small, focused modules; avoid unrelated changes in a single patch.
+- Keep event loops structured as: handle events → update → draw → flip.
+- Use AAA pattern for tests. Favor dependency injection for assets and I/O.
+- Use absolute or relative imports consistently within a package; prefer relative for intra‑package.
+- Log succinctly; avoid noisy prints in tight loops.

@@ -1,4 +1,4 @@
-Claude Coding Standards
+Codex Coding Standards
 
 This project uses shared conventions for structure and readability. When writing or refactoring code as Codex, follow these orders (mirroring CLAUDE.md) and keep changes minimal and well‑scoped.
 

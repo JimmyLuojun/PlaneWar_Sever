@@ -1,13 +1,13 @@
 """
-Enemy sprite module for PlaneWar game.
+Enemy sprite module for the PlaneWar game.
 
 Defines enemy classes including basic drifting enemies and boss enemies with
 predictive aiming capabilities. Contains the intercept trajectory algorithm
-for intelligent enemy shooting.
+for intelligent enemy shooting. Applies the OOP Standard Order within the module.
 """
 
 # ==============================================================================
-# Imports
+# Imports (dependencies)
 # ==============================================================================
 import math
 import random

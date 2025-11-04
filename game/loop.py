@@ -1,9 +1,8 @@
 """
 Level loop logic for the PlaneWar Pygame client.
 
-Contains the `run_game` orchestration function that manages a single level's
-event-driven loop, including spawning, updates, collisions, and drawing.
-Applies the Event-Driven Standard Order from CLAUDE.md within function scope.
+Manages a single level's event-driven flow: event handling, updates,
+collisions, and rendering. Applies the Event‑Driven Standard Order.
 """
 
 # ==============================================================================
@@ -33,7 +32,7 @@ from .background import Background
 
 
 # ==============================================================================
-# Orchestration Function (Core Logic)
+# Type Definitions / Protocols
 # ==============================================================================
 @runtime_checkable
 class CollidableSprite(Protocol):
@@ -44,6 +43,10 @@ class CollidableSprite(Protocol):
     image: pygame.Surface
     rect: pygame.Rect
 
+
+# ==============================================================================
+# Main Event Loop (Core Orchestration)
+# ==============================================================================
 def run_game(
     screen_surf: pygame.Surface,
     clock_obj: pygame.time.Clock,
@@ -122,7 +125,7 @@ def run_game(
     )
     all_sprites.add(player)
 
-    # Level State Variables
+    # --- Level State Variables ---
     game_over_local = False
     level_passed = False
     boss_active = False

@@ -2,7 +2,7 @@
 Main entry point for the PlaneWar Pygame client.
 
 Slim bootstrap that initializes Pygame, loads assets, and starts the
-application state machine. Follows the Procedural Standard Order.
+application state machine. Applies the Procedural Standard Order.
 """
 
 # ==============================================================================

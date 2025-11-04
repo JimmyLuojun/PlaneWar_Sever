@@ -1,12 +1,13 @@
 """
-Player sprite module for PlaneWar game.
+Player sprite module for the PlaneWar game.
 
 Defines the Player class representing the player's spaceship, handling movement,
 shooting mechanics, power-ups (double shot, shield, bombs), and visual effects.
+Applies the OOP Standard Order within the module.
 """
 
 # ==============================================================================
-# Imports
+# Imports (dependencies)
 # ==============================================================================
 import pygame
 from .settings import *
