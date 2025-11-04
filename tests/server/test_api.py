@@ -1,214 +1,345 @@
-# tests/server/test_api.py
-import pytest
+"""Tests for the API blueprint.
+
+This module contains tests for the API endpoints, including
+login, logout, and score submission functionality.
+"""
+
 import json
-from server.app import create_app # Adjust import based on your app factory location
-from server.extensions import db
-from server.models import User, Score
 
-# --- Fixture for Test App, Client, and Database ---
-@pytest.fixture(scope='function')
-def test_client_db():
-    """
-    Fixture to create a Flask app instance configured for testing,
-    a test client to make requests, and an in-memory database.
-    This fixture runs setup before each test function and teardown after.
-    """
-    # Define configuration overrides for the testing environment
-    test_config = {
-        "TESTING": True, # Enables testing mode in Flask and extensions
-        "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:", # Use in-memory SQLite DB
-        "WTF_CSRF_ENABLED": False, # Disable CSRF protection for simpler test requests
-        # LOGIN_DISABLED: Set based on API auth method.
-        # True: If API uses insecure user_id pass-through or tokens managed outside Flask-Login sessions.
-        # False: If API relies on Flask-Login session cookies for authentication.
-        "LOGIN_DISABLED": True, # Assuming insecure API for now, simplifies testing auth logic directly
-        "SECRET_KEY": "test-secret-key", # Required for session cookies, even if login is disabled
-        "SQLALCHEMY_TRACK_MODIFICATIONS": False, # Disable noisy modification tracking
-        # Add any other necessary test configurations (e.g., mail settings if testing emails)
-    }
-    # Create the Flask app instance using the factory, passing the test config
-    # This assumes create_app now accepts 'config_override'
-    app = create_app(config_override=test_config)
+from server.models import Score, User
 
-    # Establish an application context before interacting with the database or app features
-    with app.app_context():
-        db.create_all() # Create database tables based on models defined in models.py
 
-        # Optional: Pre-populate the database with a common test user for convenience
-        test_user = User(username="api_user")
-        test_user.set_password("password") # Set a known password
-        db.session.add(test_user)
-        db.session.commit() # Commit to save the user and assign an ID
+def test_api_login_success(client, db):
+    """Test successful API login."""
+    # Arrange
+    user = User(username="testuser")
+    user.set_password("password123")
+    db.session.add(user)
+    db.session.commit()
 
-        client = app.test_client() # Create the test client associated with this app instance
+    # Act
+    response = client.post(
+        "/api/login",
+        json={"username": "testuser", "password": "password123"},
+    )
+    data = json.loads(response.data)
 
-        # Yield the test client, db instance, and the test user's ID to the test function
-        yield client, db, test_user.id
+    # Assert
+    assert response.status_code == 200
+    assert data["success"] is True
+    assert data["message"] == "Login successful"
+    assert data["user_id"] == user.id
+    assert data["username"] == "testuser"
 
-        # Teardown: Runs after the test function completes
-        db.session.remove() # Clean up the database session
-        db.drop_all()     # Drop all tables to ensure test isolation
 
-# ============================
-# === /api/login Tests ===
-# ============================
+def test_api_login_invalid_credentials(client, db):
+    """Test API login with invalid credentials."""
+    # Arrange
+    user = User(username="testuser")
+    user.set_password("password123")
+    db.session.add(user)
+    db.session.commit()
 
-def test_api_login_success(test_client_db):
-    """Test successful API login with correct credentials."""
-    client, db, _ = test_client_db # Unpack the fixture results
-    # Make a POST request to the login endpoint with valid JSON data
-    response = client.post('/api/login', json={ # Ensure URL prefix matches blueprint registration
-        'username': 'api_user',
-        'password': 'password'
-    })
-    # Parse the JSON response
-    data = response.get_json()
-    # Assertions: Check status code and response content
-    assert response.status_code == 200 # OK
-    assert data['success'] is True
-    assert data['message'] == "Login successful"
-    assert 'user_id' in data and isinstance(data['user_id'], int)
-    assert data['username'] == 'api_user'
+    # Act
+    response = client.post(
+        "/api/login",
+        json={"username": "testuser", "password": "wrongpassword"},
+    )
+    data = json.loads(response.data)
 
-def test_api_login_invalid_credentials(test_client_db):
-    """Test API login with incorrect password."""
-    client, db, _ = test_client_db
-    response = client.post('/api/login', json={
-        'username': 'api_user',
-        'password': 'wrongpassword' # Incorrect password
-    })
-    data = response.get_json()
-    assert response.status_code == 401 # Unauthorized
-    assert data['success'] is False
-    assert data['message'] == "Invalid credentials" # Check for generic security message
+    # Assert
+    assert response.status_code == 401
+    assert data["success"] is False
+    assert data["message"] == "Invalid credentials"
 
-def test_api_login_user_not_found(test_client_db):
-    """Test API login attempt for a user that does not exist."""
-    client, db, _ = test_client_db
-    response = client.post('/api/login', json={
-        'username': 'nosuchuser', # Non-existent username
-        'password': 'password'
-    })
-    data = response.get_json()
-    assert response.status_code == 401 # Unauthorized (should return same error as wrong password)
-    assert data['success'] is False
-    assert data['message'] == "Invalid credentials"
 
-def test_api_login_missing_fields(test_client_db):
-    """Test API login request missing required username or password fields."""
-    client, db, _ = test_client_db
-    # Test missing password
-    response = client.post('/api/login', json={'username': 'api_user'})
-    assert response.status_code == 400 # Bad Request
-    assert response.get_json()['message'] == "Username and password required"
+def test_api_login_nonexistent_user(client, db):
+    """Test API login with nonexistent user."""
+    # Arrange & Act
+    response = client.post(
+        "/api/login",
+        json={"username": "nonexistent", "password": "password123"},
+    )
+    data = json.loads(response.data)
 
-    # Test missing username
-    response = client.post('/api/login', json={'password': 'password'})
-    assert response.status_code == 400 # Bad Request
-    assert response.get_json()['message'] == "Username and password required"
+    # Assert
+    assert response.status_code == 401
+    assert data["success"] is False
+    assert data["message"] == "Invalid credentials"
 
-def test_api_login_not_json(test_client_db):
-    """Test API login endpoint rejects requests that are not JSON."""
-    client, db, _ = test_client_db
-    response = client.post('/api/login', data="not valid json data") # Send non-JSON data
-    assert response.status_code == 415 # Unsupported Media Type
-    assert "Request must be JSON" in response.get_json()['message']
 
-# ================================
-# === /api/submit_score Tests ===
-# ================================
+def test_api_login_missing_username(client, db):
+    """Test API login with missing username."""
+    # Arrange & Act
+    response = client.post(
+        "/api/login",
+        json={"password": "password123"},
+    )
+    data = json.loads(response.data)
 
-def test_api_submit_score_success(test_client_db):
-    """Test successful score submission via the API."""
-    client, db, test_user_id = test_client_db # Get the pre-created user's ID
-    score_payload = {
-        'user_id': test_user_id, # Using the insecure method (sending ID in payload)
-        'score': 150,
-        'level': 2
-    }
-    # Make POST request to submit score endpoint
-    response = client.post('/api/submit_score', json=score_payload) # Ensure URL prefix matches
-    data = response.get_json()
-
-    # Assertions: Check status code and response message
-    assert response.status_code == 201 # Created
-    assert data['success'] is True
-    assert data['message'] == "Score submitted successfully for level 2."
-
-    # Verify the score was actually saved in the database
-    score_in_db = Score.query.filter_by(user_id=test_user_id, score_value=150).first()
-    assert score_in_db is not None
-    assert score_in_db.level == 2
-    assert score_in_db.timestamp is not None # Check timestamp was set
-
-def test_api_submit_score_missing_fields(test_client_db):
-    """Test score submission API rejects requests with missing required fields."""
-    client, db, test_user_id = test_client_db
-    # Test missing 'level'
-    response = client.post('/api/submit_score', json={'user_id': test_user_id, 'score': 100})
-    assert response.status_code == 400 # Bad Request
-    assert response.get_json()['message'] == "Missing user_id, score, or level"
-
-    # Test missing 'score'
-    response = client.post('/api/submit_score', json={'user_id': test_user_id, 'level': 1})
+    # Assert
     assert response.status_code == 400
-    assert response.get_json()['message'] == "Missing user_id, score, or level"
+    assert data["success"] is False
+    assert data["message"] == "Username and password required"
 
-    # Test missing 'user_id'
-    response = client.post('/api/submit_score', json={'score': 100, 'level': 1})
+
+def test_api_login_missing_password(client, db):
+    """Test API login with missing password."""
+    # Arrange & Act
+    response = client.post(
+        "/api/login",
+        json={"username": "testuser"},
+    )
+    data = json.loads(response.data)
+
+    # Assert
     assert response.status_code == 400
-    assert response.get_json()['message'] == "Missing user_id, score, or level"
+    assert data["success"] is False
+    assert data["message"] == "Username and password required"
 
-def test_api_submit_score_invalid_types(test_client_db):
-    """Test score submission API rejects requests with invalid data types."""
-    client, db, test_user_id = test_client_db
-    # Test invalid 'score' type
-    response = client.post('/api/submit_score', json={
-        'user_id': test_user_id,
-        'score': 'one hundred fifty', # String instead of int
-        'level': 1
-    })
+
+def test_api_login_not_json(client, db):
+    """Test API login with non-JSON request."""
+    # Arrange & Act
+    response = client.post(
+        "/api/login",
+        data={"username": "testuser", "password": "password123"},
+    )
+    data = json.loads(response.data)
+
+    # Assert
+    assert response.status_code == 415
+    assert data["success"] is False
+    assert data["message"] == "Request must be JSON"
+
+
+def test_api_logout(client, db):
+    """Test API logout."""
+    # Arrange
+    user = User(username="testuser")
+    user.set_password("password123")
+    db.session.add(user)
+    db.session.commit()
+
+    # Login first
+    client.post(
+        "/api/login",
+        json={"username": "testuser", "password": "password123"},
+    )
+
+    # Act
+    response = client.post("/api/logout")
+    data = json.loads(response.data)
+
+    # Assert
+    assert response.status_code == 200
+    assert data["success"] is True
+    assert data["message"] == "Logout successful"
+
+
+def test_api_submit_score_success(client, db):
+    """Test successful score submission."""
+    # Arrange
+    user = User(username="testuser")
+    user.set_password("password123")
+    db.session.add(user)
+    db.session.commit()
+
+    # Act
+    response = client.post(
+        "/api/submit_score",
+        json={"user_id": user.id, "score": 1000, "level": 1},
+    )
+    data = json.loads(response.data)
+
+    # Assert
+    assert response.status_code == 201
+    assert data["success"] is True
+    assert "Score submitted successfully for level 1" in data["message"]
+
+    # Verify score was saved
+    score = Score.query.filter_by(user_id=user.id, level=1).first()
+    assert score is not None
+    assert score.score_value == 1000
+
+
+def test_api_submit_score_missing_user_id(client, db):
+    """Test score submission with missing user_id."""
+    # Arrange & Act
+    response = client.post(
+        "/api/submit_score",
+        json={"score": 1000, "level": 1},
+    )
+    data = json.loads(response.data)
+
+    # Assert
     assert response.status_code == 400
-    assert response.get_json()['message'] == "Invalid data types for user_id, score, or level"
+    assert data["success"] is False
+    assert data["message"] == "Missing user_id, score, or level"
 
-    # Test invalid 'level' type
-    response = client.post('/api/submit_score', json={
-        'user_id': test_user_id,
-        'score': 100,
-        'level': 'level two' # String instead of int
-    })
+
+def test_api_submit_score_missing_score(client, db):
+    """Test score submission with missing score."""
+    # Arrange
+    user = User(username="testuser")
+    user.set_password("password123")
+    db.session.add(user)
+    db.session.commit()
+
+    # Act
+    response = client.post(
+        "/api/submit_score",
+        json={"user_id": user.id, "level": 1},
+    )
+    data = json.loads(response.data)
+
+    # Assert
     assert response.status_code == 400
-    assert response.get_json()['message'] == "Invalid data types for user_id, score, or level"
+    assert data["success"] is False
+    assert data["message"] == "Missing user_id, score, or level"
 
-    # Test invalid 'user_id' type
-    response = client.post('/api/submit_score', json={
-        'user_id': 'user_one', # String instead of int
-        'score': 100,
-        'level': 1
-    })
+
+def test_api_submit_score_missing_level(client, db):
+    """Test score submission with missing level."""
+    # Arrange
+    user = User(username="testuser")
+    user.set_password("password123")
+    db.session.add(user)
+    db.session.commit()
+
+    # Act
+    response = client.post(
+        "/api/submit_score",
+        json={"user_id": user.id, "score": 1000},
+    )
+    data = json.loads(response.data)
+
+    # Assert
     assert response.status_code == 400
-    assert response.get_json()['message'] == "Invalid data types for user_id, score, or level"
+    assert data["success"] is False
+    assert data["message"] == "Missing user_id, score, or level"
 
 
-def test_api_submit_score_user_not_found(test_client_db):
-    """Test score submission API when the provided user_id does not exist."""
-    client, db, _ = test_client_db
-    non_existent_user_id = 9999 # An ID assumed not to exist
-    response = client.post('/api/submit_score', json={
-        'user_id': non_existent_user_id,
-        'score': 50,
-        'level': 1
-    })
-    # Based on the current *insecure* check in api.py, this returns 404
-    assert response.status_code == 404 # Not Found
-    assert response.get_json()['message'] == "User specified by user_id not found"
-    # Note: A secure implementation would likely return 401 Unauthorized if auth failed
+def test_api_submit_score_invalid_user_id_type(client, db):
+    """Test score submission with invalid user_id type."""
+    # Arrange & Act
+    response = client.post(
+        "/api/submit_score",
+        json={"user_id": "invalid", "score": 1000, "level": 1},
+    )
+    data = json.loads(response.data)
 
-def test_api_submit_score_not_json(test_client_db):
-    """Test score submission API rejects requests that are not JSON."""
-    client, db, test_user_id = test_client_db
-    # Send data in a different format (e.g., form-encoded)
-    response = client.post('/api/submit_score', data=f"user_id={test_user_id}&score=100&level=1")
-    assert response.status_code == 415 # Unsupported Media Type
-    assert "Request must be JSON" in response.get_json()['message']
+    # Assert
+    assert response.status_code == 400
+    assert data["success"] is False
+    assert data["message"] == "Invalid data types for user_id, score, or level"
 
+
+def test_api_submit_score_invalid_score_type(client, db):
+    """Test score submission with invalid score type."""
+    # Arrange
+    user = User(username="testuser")
+    user.set_password("password123")
+    db.session.add(user)
+    db.session.commit()
+
+    # Act
+    response = client.post(
+        "/api/submit_score",
+        json={"user_id": user.id, "score": "invalid", "level": 1},
+    )
+    data = json.loads(response.data)
+
+    # Assert
+    assert response.status_code == 400
+    assert data["success"] is False
+    assert data["message"] == "Invalid data types for user_id, score, or level"
+
+
+def test_api_submit_score_invalid_level_type(client, db):
+    """Test score submission with invalid level type."""
+    # Arrange
+    user = User(username="testuser")
+    user.set_password("password123")
+    db.session.add(user)
+    db.session.commit()
+
+    # Act
+    response = client.post(
+        "/api/submit_score",
+        json={"user_id": user.id, "score": 1000, "level": "invalid"},
+    )
+    data = json.loads(response.data)
+
+    # Assert
+    assert response.status_code == 400
+    assert data["success"] is False
+    assert data["message"] == "Invalid data types for user_id, score, or level"
+
+
+def test_api_submit_score_nonexistent_user(client, db):
+    """Test score submission for nonexistent user."""
+    # Arrange & Act
+    response = client.post(
+        "/api/submit_score",
+        json={"user_id": 99999, "score": 1000, "level": 1},
+    )
+    data = json.loads(response.data)
+
+    # Assert
+    assert response.status_code == 404
+    assert data["success"] is False
+    assert data["message"] == "User specified by user_id not found"
+
+
+def test_api_submit_score_not_json(client, db):
+    """Test score submission with non-JSON request."""
+    # Arrange
+    user = User(username="testuser")
+    user.set_password("password123")
+    db.session.add(user)
+    db.session.commit()
+
+    # Act
+    response = client.post(
+        "/api/submit_score",
+        data={"user_id": user.id, "score": 1000, "level": 1},
+    )
+    data = json.loads(response.data)
+
+    # Assert
+    assert response.status_code == 415
+    assert data["success"] is False
+    assert data["message"] == "Request must be JSON"
+
+
+def test_api_submit_multiple_scores(client, db):
+    """Test submitting multiple scores for the same user."""
+    # Arrange
+    user = User(username="testuser")
+    user.set_password("password123")
+    db.session.add(user)
+    db.session.commit()
+
+    # Act
+    response1 = client.post(
+        "/api/submit_score",
+        json={"user_id": user.id, "score": 1000, "level": 1},
+    )
+    response2 = client.post(
+        "/api/submit_score",
+        json={"user_id": user.id, "score": 1500, "level": 1},
+    )
+    response3 = client.post(
+        "/api/submit_score",
+        json={"user_id": user.id, "score": 2000, "level": 2},
+    )
+
+    # Assert
+    assert response1.status_code == 201
+    assert response2.status_code == 201
+    assert response3.status_code == 201
+
+    # Verify all scores were saved
+    scores = Score.query.filter_by(user_id=user.id).all()
+    assert len(scores) == 3

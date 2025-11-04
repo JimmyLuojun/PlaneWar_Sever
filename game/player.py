@@ -1,13 +1,35 @@
-import pygame
-# --- Use relative imports for modules within the 'game' package ---
-from .settings import *  # Import constants
-from .bullet import Bullet  # Import Bullet class
+"""
+Player sprite module for PlaneWar game.
 
+Defines the Player class representing the player's spaceship, handling movement,
+shooting mechanics, power-ups (double shot, shield, bombs), and visual effects.
+"""
+
+# ==============================================================================
+# Imports
+# ==============================================================================
+import pygame
+from .settings import *
+from .bullet import Bullet
+
+
+# ==============================================================================
+# Constants
+# ==============================================================================
+# Shield visual defaults (fallback if not in settings)
+DEFAULT_SHIELD_COLOR = (0, 255, 255, 100)
+SHIELD_RADIUS_PADDING = 8
+
+
+# ==============================================================================
+# Concrete Classes
+# ==============================================================================
 class Player(pygame.sprite.Sprite):
     """
     Represents the player's spaceship, handling movement, shooting,
     power-ups, bombs, and shield visuals.
     """
+
     def __init__(
         self,
         player_img,
@@ -40,11 +62,13 @@ class Player(pygame.sprite.Sprite):
         self.shield_end_time = 0
 
         # Shield visuals
-        self.shield_visual_radius = max(self.rect.width, self.rect.height) // 2 + 8
+        self.shield_visual_radius = (
+            max(self.rect.width, self.rect.height) // 2 + SHIELD_RADIUS_PADDING
+        )
         try:
             self.shield_visual_color = SHIELD_VISUAL_COLOR
         except NameError:
-            self.shield_visual_color = (0, 255, 255, 100)
+            self.shield_visual_color = DEFAULT_SHIELD_COLOR
 
         # Sounds
         self.shoot_sound = shoot_sound
@@ -62,7 +86,7 @@ class Player(pygame.sprite.Sprite):
         if now - self.last_shot_time > self.shoot_delay:
             self.last_shot_time = now
             bullets = []
-            if self.powerup_type == 'double_shot':
+            if self.powerup_type == "double_shot":
                 left = Bullet(self.rect.centerx - 10, self.rect.top)
                 right = Bullet(self.rect.centerx + 10, self.rect.top)
                 bullets.extend([left, right])
@@ -81,7 +105,7 @@ class Player(pygame.sprite.Sprite):
         now = pygame.time.get_ticks()
 
         # Power-up expiration
-        if self.powerup_type == 'double_shot' and now > self.powerup_end_time:
+        if self.powerup_type == "double_shot" and now > self.powerup_end_time:
             self.powerup_type = None
         if self.shield_active and now > self.shield_end_time:
             self.shield_active = False
@@ -110,10 +134,10 @@ class Player(pygame.sprite.Sprite):
 
     def activate_powerup(self, type):
         now = pygame.time.get_ticks()
-        if type == 'double_shot':
+        if type == "double_shot":
             self.powerup_type = type
             self.powerup_end_time = now + POWERUP_DURATION
-        elif type == 'shield':
+        elif type == "shield":
             self.shield_active = True
             self.shield_end_time = now + SHIELD_DURATION
             if self.shield_up_sound:
@@ -121,7 +145,7 @@ class Player(pygame.sprite.Sprite):
                     self.shield_up_sound.play()
                 except pygame.error:
                     pass
-        elif type == 'bomb':
+        elif type == "bomb":
             self.bomb_count += 1
 
         if self.powerup_sound:
@@ -140,7 +164,8 @@ class Player(pygame.sprite.Sprite):
                     pass
             killed = 0
             for e in enemies_group.sprites():
-                e.kill(); killed += 1
+                e.kill()
+                killed += 1
             for b in enemy_bullets_group.sprites():
                 b.kill()
             return killed
@@ -153,6 +178,8 @@ class Player(pygame.sprite.Sprite):
         diameter = max(1, radius * 2)
         shield_surf = pygame.Surface((diameter, diameter), pygame.SRCALPHA)
         draw_r = max(1, radius)
-        pygame.draw.circle(shield_surf, self.shield_visual_color, (radius, radius), draw_r)
+        pygame.draw.circle(
+            shield_surf, self.shield_visual_color, (radius, radius), draw_r
+        )
         rect = shield_surf.get_rect(center=self.rect.center)
         surface.blit(shield_surf, rect)

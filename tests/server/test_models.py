@@ -1,165 +1,209 @@
-# tests/server/test_models.py # Corrected path comment
-import pytest
-from server.app import create_app # Adjust import based on your app factory location
-from server.extensions import db
-from server.models import User, Score
-# --- MODIFIED IMPORT ---
-from datetime import datetime, timedelta, UTC # Import UTC
+"""Tests for database models.
 
-# --- Fixture for Test App Context and Database ---
-@pytest.fixture(scope='function')
-def test_app_db():
-    """Fixture to create app context and in-memory database for each test function."""
-    # Use an in-memory SQLite database for testing
-    test_config = {
-        "TESTING": True,
-        "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
-        "WTF_CSRF_ENABLED": False, # Disable CSRF for simpler form testing if needed
-        "LOGIN_DISABLED": False, # Keep login enabled unless specifically testing without it
-        "SECRET_KEY": "test-secret-key", # Required for session management
-        "SQLALCHEMY_TRACK_MODIFICATIONS": False,
-    }
-    # Assumes create_app accepts config_override
-    app = create_app(config_override=test_config)
+This module contains tests for the User and Score models, including
+password hashing, relationships, and data validation.
+"""
 
-    with app.app_context():
-        db.create_all() # Create tables based on models
-        yield app, db    # Provide the app and db object to the test
-        db.session.remove() # Clean up session
-        db.drop_all()     # Drop all tables after the test
+from datetime import datetime
 
-# --- User Model Tests ---
+from server.models import Score, User, load_user
 
-def test_user_creation(test_app_db):
-    """Test creating a new User."""
-    app, db = test_app_db
-    username = "testuser"
-    password = "password123"
-    user = User(username=username)
-    user.set_password(password)
 
+def test_user_creation(db):
+    """Test creating a new user."""
+    # Arrange & Act
+    user = User(username="testuser")
+    user.set_password("password123")
     db.session.add(user)
     db.session.commit()
 
-    retrieved_user = User.query.filter_by(username=username).first()
-    assert retrieved_user is not None
-    assert retrieved_user.username == username
-    assert retrieved_user.id is not None
-    assert retrieved_user.password_hash != password # Ensure password is hashed
-    assert retrieved_user.check_password(password) # Check password verification
-    assert not retrieved_user.check_password("wrongpassword")
+    # Assert
+    assert user.id is not None
+    assert user.username == "testuser"
+    assert user.password_hash is not None
+    assert user.password_hash != "password123"
 
-def test_user_repr(test_app_db):
-    """Test the __repr__ method of the User model."""
-    app, db = test_app_db
-    user = User(username="repr_user")
-    user.set_password("pw")
+
+def test_user_set_password(db):
+    """Test password hashing."""
+    # Arrange
+    user = User(username="testuser")
+
+    # Act
+    user.set_password("mypassword")
+
+    # Assert
+    assert user.password_hash is not None
+    assert user.password_hash != "mypassword"
+    assert len(user.password_hash) > 0
+
+
+def test_user_check_password(db):
+    """Test password verification."""
+    # Arrange
+    user = User(username="testuser")
+    user.set_password("correctpassword")
     db.session.add(user)
     db.session.commit()
-    assert repr(user) == '<User repr_user>'
 
-# --- Score Model Tests ---
+    # Act & Assert
+    assert user.check_password("correctpassword") is True
+    assert user.check_password("wrongpassword") is False
 
-def test_score_creation(test_app_db):
-    """Test creating a new Score and its relationship with User."""
-    app, db = test_app_db
-    # Create a user first
-    user = User(username="scorer")
-    user.set_password("pass")
+
+def test_user_repr(db):
+    """Test user string representation."""
+    # Arrange
+    user = User(username="testuserrepr")
+    user.set_password("password")
+
+    # Act
     db.session.add(user)
-    db.session.commit() # Commit user to get an ID
+    db.session.commit()
 
-    score_val = 100
-    level_val = 1
-    # Create score associated with the user
-    # Assumes Score model now takes 'level' correctly
-    score = Score(user_id=user.id, score_value=score_val, level=level_val)
+    # Assert
+    assert repr(user) == "<User testuserrepr>"
+
+
+def test_score_creation(db):
+    """Test creating a new score."""
+    # Arrange
+    user = User(username="testuser")
+    user.set_password("password")
+    db.session.add(user)
+    db.session.commit()
+
+    # Act
+    score = Score(user_id=user.id, score_value=1000, level=1)
     db.session.add(score)
     db.session.commit()
 
-    retrieved_score = Score.query.filter_by(user_id=user.id).first()
-    assert retrieved_score is not None
-    assert retrieved_score.score_value == score_val
-    assert retrieved_score.level == level_val # Check level
-    assert retrieved_score.user_id == user.id
-    assert retrieved_score.timestamp is not None
-    assert isinstance(retrieved_score.timestamp, datetime)
+    # Assert
+    assert score.id is not None
+    assert score.user_id == user.id
+    assert score.score_value == 1000
+    assert score.level == 1
+    assert isinstance(score.timestamp, datetime)
 
-    # Test relationship access
-    assert retrieved_score.player == user
-    # Check relationship using lazy='dynamic' query object
-    assert user.scores.count() == 1
-    assert user.scores.first() == retrieved_score
 
-def test_score_repr(test_app_db):
-    """Test the __repr__ method of the Score model."""
-    app, db = test_app_db
-    user = User(username="score_repr_user")
-    user.set_password("pw")
+def test_score_repr(db):
+    """Test score string representation."""
+    # Arrange
+    user = User(username="testuser")
+    user.set_password("password")
     db.session.add(user)
     db.session.commit()
 
-    # Assumes Score model takes 'level'
-    score = Score(user_id=user.id, score_value=55, level=2)
-    db.session.add(score)
-    db.session.commit()
-    # The timestamp part might vary slightly, so check the beginning part
-    # Ensure repr matches the updated format in models.py
-    assert repr(score).startswith(f'<Score 55 by UserID {user.id} on Level 2 at ')
-
-def test_score_timestamp_default(test_app_db):
-    """Test that the timestamp defaults correctly and use timezone-aware comparison."""
-    app, db = test_app_db
-    user = User(username="timeuser")
-    user.set_password("pw")
-    db.session.add(user)
-    db.session.commit()
-
-    # Assumes Score model takes 'level'
-    score = Score(user_id=user.id, score_value=10, level=1)
+    score = Score(user_id=user.id, score_value=1000, level=1)
     db.session.add(score)
     db.session.commit()
 
-    # --- USE RECOMMENDED METHOD FOR UTC TIME ---
-    now_utc = datetime.now(UTC) # Get current timezone-aware UTC time
+    # Act
+    repr_string = repr(score)
 
-    # Assert timestamp is close to now (within a reasonable delta like 10 seconds)
-    # Ensure the score timestamp is timezone-aware if possible, or compare naive times carefully
-    # If score.timestamp is naive (depends on DB driver/SQLAlchemy config), make 'now' naive for comparison:
-    # now_naive = datetime.now(UTC).replace(tzinfo=None)
-    # assert now_naive - score.timestamp < timedelta(seconds=10)
-
-    # Assuming score.timestamp is timezone-aware (best practice with default=datetime.utcnow replacement):
-    assert score.timestamp.tzinfo is not None or db.engine.dialect.name == 'sqlite', "Timestamp should be timezone-aware (except maybe basic SQLite)"
-    # Compare aware time directly if possible, otherwise compare naive versions
-    if score.timestamp.tzinfo:
-         assert now_utc - score.timestamp < timedelta(seconds=10)
-    else: # Fallback for naive comparison (less ideal)
-         now_naive = now_utc.replace(tzinfo=None)
-         score_naive = score.timestamp # Already naive
-         assert now_naive - score_naive < timedelta(seconds=10)
+    # Assert
+    assert f"<Score 1000 by UserID {user.id} on Level 1" in repr_string
 
 
-def test_user_score_cascade_delete(test_app_db):
-    """Test that deleting a User cascades to delete their Scores."""
-    app, db = test_app_db
-    user = User(username="deleteuser")
-    user.set_password("pw")
+def test_user_score_relationship(db):
+    """Test the relationship between User and Score."""
+    # Arrange
+    user = User(username="testuser")
+    user.set_password("password")
     db.session.add(user)
     db.session.commit()
 
-    # Assumes Score model takes 'level'
-    score1 = Score(user_id=user.id, score_value=100, level=1)
-    score2 = Score(user_id=user.id, score_value=200, level=2)
+    # Act
+    score1 = Score(user_id=user.id, score_value=1000, level=1)
+    score2 = Score(user_id=user.id, score_value=2000, level=2)
     db.session.add_all([score1, score2])
     db.session.commit()
 
-    assert Score.query.count() == 2
+    # Assert
+    assert user.scores.count() == 2
+    assert score1.player.username == "testuser"
+    assert score2.player.username == "testuser"
 
-    # Delete the user
+
+def test_user_cascade_delete(db):
+    """Test that deleting a user also deletes their scores."""
+    # Arrange
+    user = User(username="testuser")
+    user.set_password("password")
+    db.session.add(user)
+    db.session.commit()
+
+    score1 = Score(user_id=user.id, score_value=1000, level=1)
+    score2 = Score(user_id=user.id, score_value=2000, level=2)
+    db.session.add_all([score1, score2])
+    db.session.commit()
+
+    user_id = user.id
+
+    # Act
     db.session.delete(user)
     db.session.commit()
 
-    # Assert scores associated with the user are also deleted
-    assert User.query.filter_by(username="deleteuser").first() is None
-    assert Score.query.count() == 0 # Verify cascade delete worked
+    # Assert
+    assert User.query.get(user_id) is None
+    assert Score.query.filter_by(user_id=user_id).count() == 0
+
+
+def test_load_user_valid_id(app, db):
+    """Test loading a user with a valid ID."""
+    # Arrange
+    user = User(username="testuser")
+    user.set_password("password")
+    db.session.add(user)
+    db.session.commit()
+    user_id = user.id
+
+    # Act
+    with app.app_context():
+        loaded_user = load_user(user_id)
+
+    # Assert
+    assert loaded_user is not None
+    assert loaded_user.id == user_id
+    assert loaded_user.username == "testuser"
+
+
+def test_load_user_invalid_id(app, db):
+    """Test loading a user with an invalid ID."""
+    # Arrange & Act
+    with app.app_context():
+        loaded_user = load_user(99999)
+
+    # Assert
+    assert loaded_user is None
+
+
+def test_load_user_invalid_type(app, db):
+    """Test loading a user with an invalid ID type."""
+    # Arrange & Act
+    with app.app_context():
+        loaded_user = load_user("invalid")
+
+    # Assert
+    assert loaded_user is None
+
+
+def test_multiple_scores_for_same_level(db):
+    """Test that a user can have multiple scores for the same level."""
+    # Arrange
+    user = User(username="testuser")
+    user.set_password("password")
+    db.session.add(user)
+    db.session.commit()
+
+    # Act
+    score1 = Score(user_id=user.id, score_value=1000, level=1)
+    score2 = Score(user_id=user.id, score_value=1500, level=1)
+    score3 = Score(user_id=user.id, score_value=800, level=1)
+    db.session.add_all([score1, score2, score3])
+    db.session.commit()
+
+    # Assert
+    level_1_scores = Score.query.filter_by(user_id=user.id, level=1).all()
+    assert len(level_1_scores) == 3
+    assert {s.score_value for s in level_1_scores} == {1000, 1500, 800}

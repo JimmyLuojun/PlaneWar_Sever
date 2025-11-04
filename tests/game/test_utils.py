@@ -1,163 +1,271 @@
-# tests/game/test_utils.py
+"""Tests for game/utils.py - Utility functions and asset loading."""
 
-import os
-import json
-import random
-import pygame
 import pytest
-from game import utils
-from game.settings import WHITE
+from unittest.mock import patch, mock_open, Mock
+import json
+import os
+import pygame
+from game.utils import (
+    AssetLoader,
+    load_high_score,
+    save_high_score,
+    load_level_data,
+    _load_single_level_file,
+    _resolve_absolute_path
+)
 
-# --- Dummy classes to simulate Surfaces and Sounds ---
 
-class DummySurface:
-    def __init__(self, size):
-        # size: (w,h) tuple
-        self.size = size
-        self._colorkey = None
-        self.filled = None
-        self.rect = pygame.Rect(0, 0, *size)
-    def fill(self, color):
-        self.filled = color
-    def get_rect(self):
-        return self.rect
-    def set_colorkey(self, key, flag):
-        self._colorkey = key
-    def get_at(self, pos):
-        # return a dummy pixel RGBA
-        return (10, 20, 30, 40)
+class TestAssetLoader:
+    """Tests for AssetLoader class."""
 
-class DummySound:
-    def __init__(self, path):
-        self.path = path
-        self.volume = None
-    def set_volume(self, v):
-        self.volume = v
+    @patch('pygame.image.load')
+    @patch('pygame.transform.scale')
+    @patch('os.path.exists', return_value=True)
+    def test_load_and_scale_image_success(self, mock_exists, mock_scale, mock_load, mock_image):
+        """Test loading and scaling image successfully."""
+        mock_load.return_value = mock_image
+        mock_scale.return_value = mock_image
+        loader = AssetLoader()
 
-# --- Tests for load_and_scale_image ---
+        result = loader.load_and_scale_image('test.png', 64, 64)
 
-def test_load_and_scale_image_fallback(monkeypatch):
-    # Path does not exist → fallback surface
-    monkeypatch.setattr(os.path, "exists", lambda p: False)
-    monkeypatch.setattr(pygame, "Surface", lambda size: DummySurface(size))
-    monkeypatch.setattr(pygame.draw, "rect", lambda surf, col, rect, w=0: None)
+        assert result == mock_image
+        mock_scale.assert_called_once_with(mock_image, (64, 64))
 
-    surf = utils.load_and_scale_image("no_such.png", 50, 60)
-    assert isinstance(surf, DummySurface)
-    assert surf.size == (50, 60)
-    # fallback fill color is reddish
-    assert surf.filled == (200, 50, 50)
+    @patch('os.path.exists', return_value=False)
+    @patch('pygame.Surface')
+    def test_load_and_scale_image_fallback(self, mock_surface, mock_exists):
+        """Test fallback when image file missing."""
+        mock_surface_instance = Mock()
+        mock_surface.return_value = mock_surface_instance
+        loader = AssetLoader()
 
-def test_load_and_scale_image_success(monkeypatch, tmp_path):
-    # Create a real file so os.path.exists returns True
-    img_file = tmp_path / "test.png"
-    img_file.write_text("irrelevant")
+        result = loader.load_and_scale_image('missing.png', 64, 64)
 
-    # Dummy raw image from pygame.image.load
-    class Raw:
-        def convert_alpha(self): return self
-        def get_at(self, pos): return (1,2,3,4)
+        assert result == mock_surface_instance
 
-    dummy_raw = Raw()
-    scaled = DummySurface((80, 90))
+    @patch('pygame.image.load', side_effect=pygame.error)
+    @patch('os.path.exists', return_value=True)
+    @patch('pygame.Surface')
+    def test_load_and_scale_image_pygame_error(self, mock_surface, mock_exists, mock_load):
+        """Test fallback on pygame error."""
+        mock_surface_instance = Mock()
+        mock_surface.return_value = mock_surface_instance
+        loader = AssetLoader()
 
-    monkeypatch.setattr(os.path, "exists", lambda p: True)
-    monkeypatch.setattr(pygame.image, "load", lambda p: dummy_raw)
-    monkeypatch.setattr(pygame.transform, "scale", lambda img, size: scaled)
-    # Test without colorkey
-    out = utils.load_and_scale_image(str(img_file), 80, 90, colorkey=None)
-    assert out is scaled
+        result = loader.load_and_scale_image('corrupt.png', 64, 64)
 
-    # Test with special colorkey = -1 (use top-left pixel)
-    scaled2 = DummySurface((80,90))
-    monkeypatch.setattr(pygame.transform, "scale", lambda img, size: scaled2)
-    out2 = utils.load_and_scale_image(str(img_file), 80, 90, colorkey=-1)
-    # scaled2.set_colorkey should have been called with dummy_raw.get_at((0,0))
-    assert scaled2._colorkey == (1,2,3,4)
+        assert result == mock_surface_instance
 
-# --- Tests for load_sound ---
+    @patch('pygame.image.load')
+    @patch('pygame.transform.scale')
+    @patch('os.path.exists', return_value=True)
+    def test_load_and_scale_image_with_colorkey(self, mock_exists, mock_scale, mock_load, mock_image):
+        """Test loading image with colorkey transparency."""
+        mock_load.return_value = mock_image
+        mock_scale.return_value = mock_image
+        mock_image.get_at.return_value = pygame.Color(255, 0, 255)
+        loader = AssetLoader()
 
-def test_load_sound_no_mixer(monkeypatch):
-    # mixer.get_init() False → returns None
-    monkeypatch.setattr(pygame.mixer, "get_init", lambda: False)
-    assert utils.load_sound("any.wav", 0.5) is None
+        result = loader.load_and_scale_image('test.png', 64, 64, use_colorkey=True)
 
-def test_load_sound_missing_file(monkeypatch):
-    monkeypatch.setattr(pygame.mixer, "get_init", lambda: True)
-    monkeypatch.setattr(os.path, "exists", lambda p: False)
-    assert utils.load_sound("no.wav", 0.3) is None
+        mock_image.set_colorkey.assert_called()
 
-def test_load_sound_success(monkeypatch, tmp_path):
-    monkeypatch.setattr(pygame.mixer, "get_init", lambda: True)
-    path = tmp_path / "s.wav"
-    path.write_bytes(b"dummy")
-    dummy = DummySound(str(path))
-    monkeypatch.setattr(pygame.mixer, "Sound", lambda p: dummy)
+    @patch('pygame.mixer.Sound')
+    @patch('os.path.exists', return_value=True)
+    def test_load_sound_success(self, mock_exists, mock_sound_class, mock_sound):
+        """Test loading sound successfully."""
+        mock_sound_class.return_value = mock_sound
+        loader = AssetLoader()
 
-    snd = utils.load_sound(str(path), 0.75)
-    assert isinstance(snd, DummySound)
-    assert snd.volume == 0.75
+        result = loader.load_sound('test.wav', 0.5)
 
-# --- Tests for high-score file I/O ---
+        assert result == mock_sound
+        mock_sound.set_volume.assert_called_once_with(0.5)
 
-def test_load_high_score_missing(tmp_path):
-    missing = tmp_path / "hs.txt"
-    # file does not exist → 0
-    assert utils.load_high_score(str(missing)) == 0
+    @patch('os.path.exists', return_value=False)
+    def test_load_sound_file_missing(self, mock_exists):
+        """Test loading sound returns None when file missing."""
+        loader = AssetLoader()
 
-def test_load_high_score_valid(tmp_path):
-    file = tmp_path / "hs.txt"
-    file.write_text("123\n")
-    assert utils.load_high_score(str(file)) == 123
+        result = loader.load_sound('missing.wav')
 
-def test_load_high_score_invalid_content(tmp_path):
-    file = tmp_path / "hs.txt"
-    file.write_text("abc")
-    assert utils.load_high_score(str(file)) == 0
+        assert result is None
 
-def test_save_high_score(tmp_path, capsys):
-    file = tmp_path / "hs.txt"
-    utils.save_high_score(str(file), 999)
-    # file content
-    assert file.read_text() == "999"
-    # printed confirmation
-    captured = capsys.readouterr()
-    assert "Saved new high score 999" in captured.out
+    @patch('pygame.mixer.Sound', side_effect=pygame.error)
+    @patch('os.path.exists', return_value=True)
+    def test_load_sound_mixer_unavailable(self, mock_exists, mock_sound):
+        """Test loading sound returns None when mixer unavailable."""
+        loader = AssetLoader()
 
-# --- Tests for load_level_data ---
+        result = loader.load_sound('test.wav')
 
-def test_load_level_data_no_dir(tmp_path, capsys):
-    missing = tmp_path / "levels"
-    out = utils.load_level_data(str(missing))
-    assert out == []
-    assert "directory not found" in capsys.readouterr().out.lower()
+        assert result is None
 
-def test_load_level_data_empty_dir(tmp_path, capsys):
-    d = tmp_path / "levels"
-    d.mkdir()
-    out = utils.load_level_data(str(d))
-    assert out == []
-    assert "no .json level files found" in capsys.readouterr().out.lower()
+    @patch('pygame.Surface')
+    @patch('pygame.draw.rect')
+    def test_create_fallback_surface(self, mock_draw, mock_surface_class):
+        """Test creating fallback surface."""
+        mock_surface_instance = Mock()
+        mock_surface_class.return_value = mock_surface_instance
+        loader = AssetLoader()
 
-def test_load_level_data_various(tmp_path, capsys):
-    d = tmp_path / "levels"
-    d.mkdir()
-    # valid levels
-    l1 = d / "lvl1.json"
-    l1.write_text(json.dumps({"level_number": 2, "foo": "bar"}))
-    l2 = d / "lvl2.json"
-    l2.write_text(json.dumps({"level_number": 1}))
-    # invalid JSON
-    (d / "bad.json").write_text("{not valid")
-    # missing level_number
-    (d / "nolvl.json").write_text(json.dumps({"foo":"bar"}))
+        result = loader._create_fallback_surface(64, 64)
 
-    out = utils.load_level_data(str(d))
-    # Should load only the two valid ones, sorted by level_number
-    assert isinstance(out, list)
-    assert [lvl["level_number"] for lvl in out] == [1, 2]
-    log = capsys.readouterr().out
-    assert "Successfully loaded: lvl1.json" in log
-    assert "Skipping file nolvl.json" in log
+        assert result == mock_surface_instance
+        mock_draw.assert_called()
 
-# End of test_utils.py
+    @patch('random.randint', return_value=128)
+    def test_random_fallback_color(self, mock_randint):
+        """Test generating random fallback color."""
+        loader = AssetLoader()
+
+        color = loader._random_fallback_color()
+
+        assert len(color) == 3
+        assert all(0 <= c <= 255 for c in color)
+
+
+class TestLoadHighScore:
+    """Tests for load_high_score function."""
+
+    @patch('builtins.open', new_callable=mock_open, read_data='5000')
+    @patch('os.path.exists', return_value=True)
+    def test_load_high_score_success(self, mock_exists, mock_file):
+        """Test loading high score from file."""
+        result = load_high_score('highscore.txt')
+
+        assert result == 5000
+
+    @patch('os.path.exists', return_value=False)
+    def test_load_high_score_file_missing(self, mock_exists):
+        """Test loading high score returns 0 when file missing."""
+        result = load_high_score('highscore.txt')
+
+        assert result == 0
+
+    @patch('builtins.open', new_callable=mock_open, read_data='invalid')
+    @patch('os.path.exists', return_value=True)
+    def test_load_high_score_invalid_data(self, mock_exists, mock_file):
+        """Test loading high score returns 0 for invalid data."""
+        result = load_high_score('highscore.txt')
+
+        assert result == 0
+
+
+class TestSaveHighScore:
+    """Tests for save_high_score function."""
+
+    @patch('builtins.open', new_callable=mock_open)
+    def test_save_high_score_success(self, mock_file):
+        """Test saving high score to file."""
+        save_high_score('highscore.txt', 6000)
+
+        mock_file.assert_called_once_with('highscore.txt', 'w')
+        handle = mock_file()
+        handle.write.assert_called_once_with('6000')
+
+    @patch('builtins.open', side_effect=IOError)
+    def test_save_high_score_io_error(self, mock_file):
+        """Test saving high score handles IO error gracefully."""
+        try:
+            save_high_score('highscore.txt', 6000)
+        except IOError:
+            pytest.fail("save_high_score should handle IOError gracefully")
+
+
+class TestLoadLevelData:
+    """Tests for load_level_data function."""
+
+    @patch('os.listdir', return_value=['level1.json', 'level2.json'])
+    @patch('os.path.exists', return_value=True)
+    @patch('builtins.open', new_callable=mock_open, read_data='{"level_number": 1, "music": "level1.mp3"}')
+    def test_load_level_data_success(self, mock_file, mock_exists, mock_listdir):
+        """Test loading level data from directory."""
+        result = load_level_data('levels')
+
+        assert len(result) == 2
+
+    @patch('os.path.exists', return_value=False)
+    def test_load_level_data_directory_missing(self, mock_exists):
+        """Test loading level data when directory missing."""
+        result = load_level_data('missing')
+
+        assert result == []
+
+    @patch('os.listdir', return_value=['level1.json', 'readme.txt'])
+    @patch('os.path.exists', return_value=True)
+    def test_load_level_data_filters_non_json(self, mock_exists, mock_listdir):
+        """Test loading level data filters non-JSON files."""
+        with patch('game.utils._load_single_level_file', return_value={'level_number': 1}):
+            result = load_level_data('levels')
+
+        assert len(result) == 1
+
+    @patch('os.listdir', return_value=['level2.json', 'level1.json', 'level3.json'])
+    @patch('os.path.exists', return_value=True)
+    def test_load_level_data_sorts_by_level_number(self, mock_exists, mock_listdir):
+        """Test level data is sorted by level_number."""
+        with patch('game.utils._load_single_level_file', side_effect=[
+            {'level_number': 2},
+            {'level_number': 1},
+            {'level_number': 3}
+        ]):
+            result = load_level_data('levels')
+
+        assert result[0]['level_number'] == 1
+        assert result[1]['level_number'] == 2
+        assert result[2]['level_number'] == 3
+
+
+class TestLoadSingleLevelFile:
+    """Tests for _load_single_level_file function."""
+
+    @patch('builtins.open', new_callable=mock_open, read_data='{"level_number": 1, "music": "level1.mp3"}')
+    def test_load_single_level_file_success(self, mock_file):
+        """Test loading single level file successfully."""
+        result = _load_single_level_file('level1.json')
+
+        assert result['level_number'] == 1
+        assert result['music'] == 'level1.mp3'
+
+    @patch('builtins.open', new_callable=mock_open, read_data='invalid json')
+    def test_load_single_level_file_invalid_json(self, mock_file):
+        """Test loading single level file with invalid JSON returns None."""
+        result = _load_single_level_file('invalid.json')
+
+        assert result is None
+
+    @patch('builtins.open', new_callable=mock_open, read_data='{"music": "level1.mp3"}')
+    def test_load_single_level_file_missing_level_number(self, mock_file):
+        """Test loading level file without level_number returns None."""
+        result = _load_single_level_file('incomplete.json')
+
+        assert result is None
+
+    @patch('builtins.open', side_effect=IOError)
+    def test_load_single_level_file_io_error(self, mock_file):
+        """Test loading level file handles IO error."""
+        result = _load_single_level_file('error.json')
+
+        assert result is None
+
+
+class TestResolveAbsolutePath:
+    """Tests for _resolve_absolute_path function."""
+
+    def test_resolve_absolute_path_already_absolute(self):
+        """Test resolving already absolute path."""
+        abs_path = '/absolute/path/to/file.mp3'
+        result = _resolve_absolute_path(abs_path, 'levels')
+
+        assert result == abs_path
+
+    def test_resolve_absolute_path_relative(self):
+        """Test resolving relative path."""
+        rel_path = 'music/level1.mp3'
+        base_dir = '/game/levels'
+
+        result = _resolve_absolute_path(rel_path, base_dir)
+
+        assert result == os.path.join(base_dir, rel_path)

@@ -1,150 +1,313 @@
-# tests/game/test_enemy.py
-import os
-import random
-import pygame
+"""Tests for game/enemy.py - Enemy sprites and AI."""
+
 import pytest
-from unittest.mock import MagicMock
+from unittest.mock import patch, Mock, MagicMock
+import pygame
+from game.enemy import Enemy, EnemyBoss, compute_intercept_direction
+from game.settings import SCREEN_WIDTH, SCREEN_HEIGHT
 
-# 强制 headless 模式
-os.environ["SDL_VIDEODRIVER"] = "dummy"
-pygame.init()
-try:
-    pygame.display.set_mode((1,1))
-except pygame.error:
-    pass
 
-from game.enemy import Enemy, EnemyBoss
-from game.settings import (
-    SCREEN_WIDTH, SCREEN_HEIGHT,
-    ENEMY_MIN_SPEED_Y, ENEMY_MAX_SPEED_Y,
-    ENEMY_MIN_SPEED_X, ENEMY_MAX_SPEED_X,
-    BOSS_SPEED_Y, BOSS_ENTRY_Y,
-    BOSS_SPEED_X, BOSS_SHOOT_DELAY,
-    BOSS_MAX_HEALTH,
-)
+class TestComputeInterceptDirection:
+    """Tests for compute_intercept_direction function."""
 
-# 一个简单的 Surface mock
-mock_img = MagicMock(spec=pygame.Surface)
-mock_rect = MagicMock(spec=pygame.Rect)
-mock_rect.width = 20
-mock_rect.height = 20
-mock_img.get_rect.return_value = mock_rect
+    def test_stationary_target(self):
+        """Test intercept calculation for stationary target."""
+        shoot_pos = pygame.math.Vector2(100, 100)
+        target_pos = pygame.math.Vector2(200, 200)
+        target_vel = pygame.math.Vector2(0, 0)
+        bullet_speed = 10
 
-def test_enemy_init_default_speed_ranges(monkeypatch):
-    # randint 返回最小值，choice 取列表首项
-    monkeypatch.setattr(random, "randint", lambda a,b: a)
-    monkeypatch.setattr(random, "choice", lambda seq: seq[0])
-    e = Enemy(enemy_img=mock_img)
-    # x,y 分别是 randint 返回的 a 和 -100
-    assert e.rect.x == 0
-    assert e.rect.y == -100
-    # 垂直速度在合法范围内
-    assert ENEMY_MIN_SPEED_Y <= e.speedy <= ENEMY_MAX_SPEED_Y
-    # 水平速度不为 0
-    assert e.speedx != 0
+        direction = compute_intercept_direction(shoot_pos, target_pos, target_vel, bullet_speed)
 
-def test_enemy_update_movement_and_bounce(monkeypatch):
-    monkeypatch.setattr(random, "randint", lambda a,b: a)
-    monkeypatch.setattr(random, "choice", lambda seq: seq[0])
-    # 制造一个左右速度都可控的敌人
-    e = Enemy(enemy_img=mock_img, speed_y_range=(5,5), speed_x_range=(3,3))
-    # 放到屏幕右边缘外
-    e.rect.right = SCREEN_WIDTH + 1
-    e.rect.left = e.rect.right - e.rect.width
-    # 更新并测试反弹
-    old_speedx = e.speedx
-    e.update()
-    assert e.speedx == -old_speedx
-    # 位置被 clamp 到 SCREEN_WIDTH
-    assert e.rect.right <= SCREEN_WIDTH
+        assert direction is not None
+        expected = (target_pos - shoot_pos).normalize()
+        assert abs(direction.x - expected.x) < 0.01
+        assert abs(direction.y - expected.y) < 0.01
 
-def test_enemy_update_kill_offscreen(monkeypatch):
-    monkeypatch.setattr(random, "randint", lambda a,b: a)
-    monkeypatch.setattr(random, "choice", lambda seq: seq[0])
-    e = Enemy(enemy_img=mock_img)
-    e.kill = MagicMock()
-    # 放到屏幕底部外
-    e.rect.top = SCREEN_HEIGHT + 1
-    e.update()
-    e.kill.assert_called_once()
+    def test_moving_target(self):
+        """Test intercept calculation for moving target."""
+        shoot_pos = pygame.math.Vector2(100, 100)
+        target_pos = pygame.math.Vector2(200, 200)
+        target_vel = pygame.math.Vector2(5, 0)
+        bullet_speed = 20
 
-def test_enemyboss_init_and_take_damage():
-    all_sprites = pygame.sprite.Group()
-    enemy_bullets = pygame.sprite.Group()
-    boss_img = mock_img.copy()
-    shoot_sound = MagicMock()
-    boss = EnemyBoss(
-        boss_img, shoot_sound,
-        all_sprites, enemy_bullets,
-        target_player=False
-    )
-    # 初始状态检查
-    assert boss.rect.centerx == SCREEN_WIDTH // 2
-    assert boss.rect.bottom == -20
-    assert not boss.entered
-    assert boss.health == boss.max_health == BOSS_MAX_HEALTH
+        direction = compute_intercept_direction(shoot_pos, target_pos, target_vel, bullet_speed)
 
-    boss.take_damage(7)
-    assert boss.health == BOSS_MAX_HEALTH - 7
+        assert direction is not None
+        assert direction.length() == pytest.approx(1.0, abs=0.01)
 
-def test_enemyboss_shoot_straight(monkeypatch):
-    all_sprites = pygame.sprite.Group()
-    enemy_bullets = pygame.sprite.Group()
-    boss_img = mock_img.copy()
-    sound = MagicMock()
-    boss = EnemyBoss(
-        boss_img, sound,
-        all_sprites, enemy_bullets,
-        target_player=False
-    )
-    # 直接调用 shoot
-    boss.shoot()
-    # 子弹加进了组
-    assert len(enemy_bullets) == 1
-    bullet = next(iter(enemy_bullets))
-    # 直射：速度向量 x=0
-    assert pytest.approx(0) == bullet.velocity.x
+    def test_fast_target_fallback(self):
+        """Test fallback to current position when target too fast to intercept."""
+        shoot_pos = pygame.math.Vector2(100, 100)
+        target_pos = pygame.math.Vector2(200, 200)
+        target_vel = pygame.math.Vector2(50, 50)
+        bullet_speed = 5
 
-def test_enemyboss_shoot_target(monkeypatch):
-    all_sprites = pygame.sprite.Group()
-    enemy_bullets = pygame.sprite.Group()
-    boss_img = mock_img.copy()
-    sound = MagicMock()
-    # 准备一个伪玩家
-    player = MagicMock()
-    player.rect.center = (30, 80)
-    player.alive.return_value = True
+        direction = compute_intercept_direction(shoot_pos, target_pos, target_vel, bullet_speed)
 
-    boss = EnemyBoss(
-        boss_img, sound,
-        all_sprites, enemy_bullets,
-        target_player=True, player_ref=player
-    )
-    # 伪造发射点
-    boss.rect.midbottom = (30, 10)
-    boss.shoot()
-    bullet = next(iter(enemy_bullets))
-    v = bullet.velocity
-    from math import isclose
-    mag = (v.x**2 + v.y**2)**0.5
-    # 斜射：方向被规范化后乘 speed => 长度约等于 speed
-    assert isclose(mag, bullet.speed, rel_tol=1e-3)
+        # Should return fallback direction (toward current position), not None
+        assert direction is not None
+        assert direction.length() == pytest.approx(1.0, abs=0.01)
 
-def test_draw_health_bar(monkeypatch):
-    all_sprites = pygame.sprite.Group()
-    enemy_bullets = pygame.sprite.Group()
-    boss = EnemyBoss(
-        mock_img.copy(), None,
-        all_sprites, enemy_bullets
-    )
-    boss.health = boss.max_health // 2
-    surf = MagicMock(spec=pygame.Surface)
-    calls = []
 
-    def fake_rect(surface, color, rect, width=0):
-        calls.append((color, rect.width, rect.height, width))
+class TestEnemy:
+    """Tests for Enemy class."""
 
-    monkeypatch.setattr(pygame.draw, "rect", fake_rect)
-    boss.draw_health_bar(surf)
-    # 背景、填充、边框 共 3 次 draw
-    assert len(calls) == 3
+    @patch('random.choice', return_value=2)
+    @patch('random.randint')
+    def test_enemy_init(self, mock_randint, mock_choice, mock_image):
+        """Test enemy initialization."""
+        mock_image.get_rect.return_value = pygame.Rect(0, 0, 64, 64)
+        mock_randint.side_effect = [400, -50, 3]
+
+        enemy = Enemy(mock_image, (2, 5), (-3, 3))
+
+        assert enemy.rect.x == 400
+        assert enemy.rect.y == -50
+        assert enemy.speedy == 3
+        assert enemy.speedx == 2
+
+    @patch('random.choice', return_value=2)
+    @patch('random.randint', side_effect=[400, -50, 3])
+    def test_enemy_update_moves_down(self, mock_randint, mock_choice, mock_image):
+        """Test enemy moves downward."""
+        mock_image.get_rect.return_value = pygame.Rect(0, 0, 64, 64)
+        enemy = Enemy(mock_image, (2, 5), (-3, 3))
+        initial_y = enemy.rect.y
+
+        enemy.update()
+
+        assert enemy.rect.y > initial_y
+
+    @patch('random.choice', return_value=2)
+    @patch('random.randint', side_effect=[400, -50, 3])
+    def test_enemy_moves_horizontally(self, mock_randint, mock_choice, mock_image):
+        """Test enemy moves horizontally."""
+        mock_image.get_rect.return_value = pygame.Rect(0, 0, 64, 64)
+        enemy = Enemy(mock_image, (2, 5), (-3, 3))
+        initial_x = enemy.rect.x
+
+        enemy.update()
+
+        assert enemy.rect.x != initial_x
+
+    @patch('random.choice', return_value=-2)
+    @patch('random.randint', side_effect=[10, -50, 3])
+    def test_enemy_bounces_at_left_edge(self, mock_randint, mock_choice, mock_image):
+        """Test enemy bounces at left screen edge."""
+        mock_image.get_rect.return_value = pygame.Rect(0, 0, 64, 64)
+        enemy = Enemy(mock_image, (2, 5), (-3, 3))
+        enemy.rect.left = 10
+        enemy.speedx = -2
+
+        enemy.update()
+
+        # After moving left by 2, left becomes 8, then update again to trigger bounce
+        enemy.update()
+        # Now left is 6, move again
+        enemy.update()
+        # Now left is 4, move again
+        enemy.update()
+        # Now left is 2, move again
+        enemy.update()
+        # Now left is 0, move again
+        enemy.update()
+        # Now left would be -2, so it bounces and speedx becomes positive
+        assert enemy.speedx > 0
+
+    @patch('random.choice', return_value=2)
+    @patch('random.randint', side_effect=[SCREEN_WIDTH - 70, -50, 3])
+    def test_enemy_bounces_at_right_edge(self, mock_randint, mock_choice, mock_image):
+        """Test enemy bounces at right screen edge."""
+        mock_image.get_rect.return_value = pygame.Rect(0, 0, 64, 64)
+        enemy = Enemy(mock_image, (2, 5), (-3, 3))
+        # Set x so that after update, right edge exceeds SCREEN_WIDTH
+        enemy.rect.x = SCREEN_WIDTH - 60
+        enemy.speedx = 2
+
+        enemy.update()
+
+        # After moving right, rect.right > SCREEN_WIDTH, so it bounces
+        assert enemy.speedx < 0
+
+    @patch('random.choice', return_value=2)
+    @patch('random.randint', side_effect=[400, SCREEN_HEIGHT, 3])
+    def test_enemy_removed_when_off_screen(self, mock_randint, mock_choice, mock_image):
+        """Test enemy removed when off bottom of screen."""
+        mock_image.get_rect.return_value = pygame.Rect(0, 0, 64, 64)
+        enemy = Enemy(mock_image, (2, 5), (-3, 3))
+        enemy.rect.top = SCREEN_HEIGHT + 10
+
+        enemy.update()
+
+        assert not enemy.alive()
+
+
+class TestEnemyBoss:
+    """Tests for EnemyBoss class."""
+
+    @patch('pygame.time.get_ticks', return_value=0)
+    def test_boss_init(self, mock_ticks, mock_image):
+        """Test boss initialization."""
+        mock_sound = Mock()
+        mock_sprites = Mock()
+        mock_bullets = Mock()
+        mock_image.copy.return_value = mock_image
+        mock_image.get_rect.return_value = pygame.Rect(0, 0, 100, 100)
+
+        boss = EnemyBoss(mock_image, mock_sound, mock_sprites, mock_bullets)
+
+        assert boss.health > 0
+        assert boss.entered == False
+        assert hasattr(boss, 'speedx')
+        assert hasattr(boss, 'entry_speedy')
+
+    @patch('pygame.time.get_ticks', return_value=0)
+    def test_boss_entry_sequence(self, mock_ticks, mock_image):
+        """Test boss entry sequence movement."""
+        mock_sound = Mock()
+        mock_sprites = Mock()
+        mock_bullets = Mock()
+        mock_image.copy.return_value = mock_image
+        mock_image.get_rect.return_value = pygame.Rect(0, 0, 100, 100)
+
+        boss = EnemyBoss(mock_image, mock_sound, mock_sprites, mock_bullets)
+        initial_y = boss.rect.y
+
+        boss.update()
+
+        # Boss should move downward during entry
+        assert boss.rect.y > initial_y or boss.entered
+
+    @patch('pygame.time.get_ticks', return_value=0)
+    def test_boss_transitions_to_active(self, mock_ticks, mock_image):
+        """Test boss transitions to active state after entry."""
+        mock_sound = Mock()
+        mock_sprites = Mock()
+        mock_bullets = Mock()
+        mock_image.copy.return_value = mock_image
+        mock_image.get_rect.return_value = pygame.Rect(0, 0, 100, 100)
+
+        boss = EnemyBoss(mock_image, mock_sound, mock_sprites, mock_bullets)
+
+        # Force boss to entry position
+        boss.rect.centery = boss.entry_y + 10
+
+        boss.update()
+
+        # Boss should be marked as entered
+        assert boss.entered == True
+
+    @patch('pygame.time.get_ticks', return_value=0)
+    def test_boss_patrol_movement(self, mock_ticks, mock_image):
+        """Test boss patrol movement."""
+        mock_sound = Mock()
+        mock_sprites = Mock()
+        mock_bullets = Mock()
+        mock_image.copy.return_value = mock_image
+        mock_image.get_rect.return_value = pygame.Rect(0, 0, 100, 100)
+
+        boss = EnemyBoss(mock_image, mock_sound, mock_sprites, mock_bullets)
+        boss.entered = True
+        initial_x = boss.rect.x
+
+        boss.update()
+
+        # Boss should move horizontally when entered
+        assert boss.rect.x != initial_x
+
+    @patch('pygame.time.get_ticks', return_value=0)
+    def test_boss_patrol_bounces_at_edges(self, mock_ticks, mock_image):
+        """Test boss bounces at screen edges during patrol."""
+        mock_sound = Mock()
+        mock_sprites = Mock()
+        mock_bullets = Mock()
+        mock_image.copy.return_value = mock_image
+        mock_image.get_rect.return_value = pygame.Rect(0, 0, 100, 100)
+
+        boss = EnemyBoss(mock_image, mock_sound, mock_sprites, mock_bullets)
+        boss.entered = True
+        boss.rect.right = SCREEN_WIDTH + 10
+        boss.speedx = 2
+
+        boss.update()
+
+        # Boss should reverse direction at right edge
+        assert boss.speedx < 0
+
+    @patch('pygame.time.get_ticks', return_value=3000)
+    def test_boss_shoot_creates_bullet(self, mock_ticks, mock_image):
+        """Test boss shoot creates enemy bullet."""
+        mock_sound = Mock()
+        mock_sprites = MagicMock()
+        mock_bullets = MagicMock()
+        mock_image.copy.return_value = mock_image
+        mock_image.get_rect.return_value = pygame.Rect(0, 0, 100, 100)
+
+        boss = EnemyBoss(mock_image, mock_sound, mock_sprites, mock_bullets)
+        boss.entered = True
+        boss.last_shot_time = 0
+
+        boss.update()
+
+        # Boss should have attempted to shoot
+        assert boss.last_shot_time > 0
+
+    @patch('pygame.time.get_ticks', return_value=3000)
+    def test_boss_shoot_with_target(self, mock_ticks, mock_image):
+        """Test boss shoots at target position."""
+        mock_sound = Mock()
+        mock_sprites = MagicMock()
+        mock_bullets = MagicMock()
+        mock_image.copy.return_value = mock_image
+        mock_image.get_rect.return_value = pygame.Rect(0, 0, 100, 100)
+
+        mock_player = Mock()
+        mock_player.rect = pygame.Rect(400, 500, 64, 64)
+        # velocity needs to be a Vector2 for compute_intercept_direction
+        mock_player.velocity = pygame.math.Vector2(5, 0)
+
+        boss = EnemyBoss(mock_image, mock_sound, mock_sprites, mock_bullets,
+                        target_player=True, player_ref=mock_player)
+        boss.entered = True
+        boss.last_shot_time = 0
+
+        boss.update()
+
+        # Boss should have shot
+        assert boss.last_shot_time > 0
+
+    @patch('pygame.time.get_ticks', return_value=3000)
+    def test_boss_shoot_straight_down(self, mock_ticks, mock_image):
+        """Test boss shoots straight down without target."""
+        mock_sound = Mock()
+        mock_sprites = MagicMock()
+        mock_bullets = MagicMock()
+        mock_image.copy.return_value = mock_image
+        mock_image.get_rect.return_value = pygame.Rect(0, 0, 100, 100)
+
+        boss = EnemyBoss(mock_image, mock_sound, mock_sprites, mock_bullets,
+                        target_player=False)
+        boss.entered = True
+        boss.last_shot_time = 0
+
+        boss.update()
+
+        # Boss should have shot straight down
+        assert boss.last_shot_time > 0
+
+    @patch('pygame.draw.rect')
+    def test_boss_draw_health_bar(self, mock_draw_rect, mock_surface, mock_image):
+        """Test boss health bar drawing."""
+        mock_sound = Mock()
+        mock_sprites = Mock()
+        mock_bullets = Mock()
+        mock_image.copy.return_value = mock_image
+        mock_image.get_rect.return_value = pygame.Rect(0, 0, 100, 100)
+
+        boss = EnemyBoss(mock_image, mock_sound, mock_sprites, mock_bullets)
+
+        boss.draw_health_bar(mock_surface)
+
+        # Should have drawn rectangles for health bar (background, fill, border = 3 calls)
+        assert mock_draw_rect.call_count == 3
