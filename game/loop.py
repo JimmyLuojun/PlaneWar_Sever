@@ -75,6 +75,7 @@ def run_game(
     # --- Get Level Configuration ---
     is_boss_level = level_data.get("is_boss_level", False)
     boss_targets_player_flag = level_data.get("boss_targets_player", False)
+    boss_fire_rate_multiplier = level_data.get("boss_fire_rate_multiplier", 1.0)
     enemy_types = level_data.get("enemy_types", ["enemy1"])
     spawn_interval = level_data.get("spawn_interval", 30)
     max_on_screen = level_data.get("max_on_screen", 8)
@@ -177,7 +178,10 @@ def run_game(
                         )
                         game_over_local = True
                     elif not boss_active:
-                        print(f"Spawning Boss (Targeting: {boss_targets_player_flag})")
+                        print(
+                            f"Spawning Boss (Targeting: {boss_targets_player_flag}, "
+                            f"Fire Rate: {boss_fire_rate_multiplier}x)"
+                        )
                         boss_instance = EnemyBoss(
                             boss_img,
                             sounds.get("boss_shoot"),
@@ -185,6 +189,7 @@ def run_game(
                             enemy_bullets,
                             target_player=boss_targets_player_flag,
                             player_ref=player,
+                            fire_rate_multiplier=boss_fire_rate_multiplier,
                         )
                         boss_group.add(boss_instance)
                         boss_active = True

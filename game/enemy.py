@@ -153,6 +153,7 @@ class EnemyBoss(pygame.sprite.Sprite):
         enemy_bullets_group,
         target_player=False,
         player_ref=None,
+        fire_rate_multiplier=1.0,
     ):
         """
         Initialize the boss enemy.
@@ -164,6 +165,8 @@ class EnemyBoss(pygame.sprite.Sprite):
             enemy_bullets_group (pygame.sprite.Group): Group for tracking bullets.
             target_player (bool): Enable predictive aiming at player.
             player_ref (Player, optional): Reference to player object for targeting.
+            fire_rate_multiplier (float): Multiplier for boss fire rate (default 1.0).
+                                          Values > 1.0 make boss shoot faster.
         """
         super().__init__()
 
@@ -177,7 +180,9 @@ class EnemyBoss(pygame.sprite.Sprite):
 
         # Health and shooting
         self.health = BOSS_MAX_HEALTH
-        self.shoot_delay = BOSS_SHOOT_DELAY
+        # Apply fire rate multiplier (higher multiplier = faster shooting = lower delay)
+        base_delay = BOSS_SHOOT_DELAY
+        self.shoot_delay = int(base_delay / max(0.1, fire_rate_multiplier))
         self.last_shot_time = 0
         self.shoot_sound = shoot_sound
 

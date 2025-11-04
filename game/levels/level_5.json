@@ -1,0 +1,28 @@
+{
+    "level_number": 5,
+    "comment": "Ultimate challenge: enemy4 appears, aggressive spawns, enhanced boss AI with rapid fire.",
+    "is_boss_level": true,
+    "boss_appear_delay_seconds": 25,
+    "duration_seconds": null,
+    "enemy_types": [
+        "enemy1",
+        "enemy2",
+        "enemy3",
+        "enemy4"
+    ],
+    "spawn_interval": 35,
+    "max_on_screen": 21,
+    "enemy_speed_y_range": [
+        4,
+        6
+    ],
+    "enemy_speed_x_range": [
+        -3,
+        3
+    ],
+    "powerup_interval": 9500,
+    "background": null,
+    "music": null,
+    "boss_targets_player": true,
+    "boss_fire_rate_multiplier": 1.5
+}
