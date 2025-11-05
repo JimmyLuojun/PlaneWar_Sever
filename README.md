@@ -164,6 +164,10 @@ poetry run run-planewar-server
 
 The project follows modern software engineering practices with clear separation of concerns:
 
+### Architecture Docs
+- See `AGENTS.md` for agent-facing coding rules that Codex follows.
+- See `docs/architecture/layered-order.md` for the full Refined Layered Order spec and file order.
+
 ### Game Architecture (Event-Driven Pattern)
 - **assets.py** - Centralized resource loader for all game assets (images, sounds, fonts, level data)
 - **loop.py** - Main game loop orchestrator handling event processing and state transitions
@@ -335,7 +339,7 @@ This project is licensed under the MIT License.
 - [x] Leaderboard service layer
 
 ### Planned 🚀
-- [ ] Additional game levels (Level 5+)
+- [ ] Additional game levels (Level 7+)
 - [ ] More enemy types and attack patterns
 - [ ] Enhanced power-ups (speed boost, invincibility)
 - [ ] Achievement system
