@@ -1,1 +1,1 @@
-/Users/junluo/Documents/Obsidian_Vault/05.Tools/Prompts/Coding Prompts/AGENTS.md
+CLAUDE-STANDARD.md
