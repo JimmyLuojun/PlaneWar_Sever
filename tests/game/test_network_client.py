@@ -3,7 +3,7 @@
 import pytest
 from unittest.mock import patch, Mock
 import requests
-from game.network_client import (
+from plane_war_server.game.infrastructure.network_client import (
     NetworkClient,
     NetworkClientError,
     AuthenticationError,
@@ -296,7 +296,7 @@ class TestBackwardCompatibility:
         mock_response.json.return_value = {'success': True}
         mock_post.return_value = mock_response
 
-        from game.network_client import submit_score_to_server
+        from plane_war_server.game.infrastructure.network_client import submit_score_to_server
 
         client = NetworkClient("http://localhost:8000")
         client.user_id = 123

@@ -9,12 +9,12 @@ from unittest.mock import patch, Mock
 import pygame
 import pytest
 
-from game import loop
-from game.player import Player
-from game.enemy import Enemy
-from game.powerup import PowerUp
-from game.bullet import Bullet
-from game.settings import SCREEN_WIDTH, SCREEN_HEIGHT, STARTUP_GRACE_PERIOD
+from plane_war_server.game.controllers import game_loop as loop
+from plane_war_server.game.models.player import Player
+from plane_war_server.game.models.enemy import Enemy
+from plane_war_server.game.models.powerup import PowerUp
+from plane_war_server.game.models.bullet import Bullet
+from plane_war_server.game.infrastructure.settings import SCREEN_WIDTH, SCREEN_HEIGHT, STARTUP_GRACE_PERIOD
 
 
 @pytest.fixture(autouse=True)
@@ -60,7 +60,7 @@ def test_player_death_after_grace(mock_update, monkeypatch):
             pass
 
     with patch("pygame.event.get", side_effect=[[], [pygame.event.Event(pygame.QUIT)]]), \
-         patch("game.loop.Enemy", FakeEnemy):
+         patch("plane_war_server.game.loop.Enemy", FakeEnemy):
         level = {"level_number": 1, "enemy_types": ["enemy1"], "spawn_interval": 1, "max_on_screen": 1}
 
         class BG:
@@ -80,7 +80,7 @@ def test_player_death_after_grace(mock_update, monkeypatch):
             background=BG(),
         )
 
-        assert result in ("FAILED", "QUIT")
+    assert result in ("FAILED", "QUIT")
 
 
 def test_boss_missing_image_fails(monkeypatch):
@@ -231,7 +231,7 @@ def test_enemy_hit_plays_sound(monkeypatch):
 
     with patch("pygame.event.get", side_effect=[[], [pygame.event.Event(pygame.QUIT)]]), \
          patch("pygame.time.get_ticks", lambda: STARTUP_GRACE_PERIOD + 10), \
-         patch("game.loop.Enemy", FakeEnemy):
+         patch("plane_war_server.game.loop.Enemy", FakeEnemy):
         result, score, lvl = loop.run_game(
             screen,
             clock,

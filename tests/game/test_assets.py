@@ -3,7 +3,7 @@
 import pytest
 from unittest.mock import patch, Mock, mock_open
 import json
-from game import assets
+from plane_war_server.game.infrastructure import assets
 
 
 class TestLoadFonts:
@@ -39,7 +39,7 @@ class TestLoadFonts:
 class TestLoadImages:
     """Tests for load_images function."""
 
-    @patch('game.utils.load_and_scale_image')
+    @patch('plane_war_server.game.infrastructure.utils.load_and_scale_image')
     def test_load_images_success(self, mock_load):
         """Test successful image loading."""
         mock_image = Mock()
@@ -54,7 +54,7 @@ class TestLoadImages:
         assert isinstance(images['powerups'], dict)
         assert images['player'] == mock_image
 
-    @patch('game.utils.load_and_scale_image', return_value=None)
+    @patch('plane_war_server.game.infrastructure.utils.load_and_scale_image', return_value=None)
     def test_load_images_handles_none(self, mock_load):
         """Test loading handles None returns gracefully."""
         images = assets.load_images()
@@ -66,7 +66,7 @@ class TestLoadSounds:
     """Tests for load_sounds function."""
 
     @patch('pygame.mixer.get_init', return_value=True)
-    @patch('game.utils.load_sound')
+    @patch('plane_war_server.game.infrastructure.utils.load_sound')
     def test_load_sounds_success(self, mock_load_sound, mock_mixer_init):
         """Test successful sound loading."""
         mock_sound = Mock()
@@ -90,7 +90,7 @@ class TestLoadSounds:
 class TestLoadLevelDataAndMusic:
     """Tests for load_level_data_and_music function."""
 
-    @patch('game.utils.load_level_data')
+    @patch('plane_war_server.game.infrastructure.utils.load_level_data')
     def test_load_level_data_and_music_success(self, mock_load_data):
         """Test successful level data loading."""
         mock_level_data = [
@@ -105,9 +105,9 @@ class TestLoadLevelDataAndMusic:
         assert len(levels_list) == 2
         assert isinstance(music_paths, dict)
 
-    @patch('game.assets.sys.exit')
-    @patch('game.assets.pygame.quit')
-    @patch('game.assets.utils.load_level_data', return_value=[])
+    @patch('plane_war_server.game.infrastructure.assets.sys.exit')
+    @patch('plane_war_server.game.infrastructure.assets.pygame.quit')
+    @patch('plane_war_server.game.infrastructure.utils.load_level_data', return_value=[])
     def test_load_level_data_empty(self, mock_load_data, mock_quit, mock_exit):
         """Test when no levels found calls sys.exit."""
         assets.load_level_data_and_music()

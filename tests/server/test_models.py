@@ -6,7 +6,7 @@ password hashing, relationships, and data validation.
 
 from datetime import datetime
 
-from server.models import Score, User, load_user
+from plane_war_server.data.models import Score, User, load_user
 
 
 def test_user_creation(db):

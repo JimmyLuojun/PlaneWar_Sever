@@ -11,9 +11,9 @@ os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 import pygame
 import pytest
 
-from game import loop
-from game.settings import SCREEN_WIDTH, SCREEN_HEIGHT, BOMB_KEY
-from game.bullet import Bullet
+from plane_war_server.game.controllers import game_loop as loop
+from plane_war_server.game.infrastructure.settings import SCREEN_WIDTH, SCREEN_HEIGHT, BOMB_KEY
+from plane_war_server.game.models.bullet import Bullet
 
 
 class DummyBackground:
@@ -193,4 +193,3 @@ def test_run_game_boss_defeat_leads_to_pass(monkeypatch):
     assert result == "PASSED"
     assert score >= 50  # Boss defeat adds 50 points
     assert level_num == 3
-

@@ -5,7 +5,7 @@ import os
 
 import pytest
 
-from server import progress_store as ps
+from plane_war_server.data import progress_store as ps
 
 
 @pytest.fixture()

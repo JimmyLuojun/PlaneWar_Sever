@@ -8,7 +8,7 @@ os.environ['SDL_AUDIODRIVER'] = 'dummy'
 import pytest
 from unittest.mock import patch, Mock
 import pygame
-from game import ui
+from plane_war_server.game.views import ui
 
 
 class TestShowLoginScreen:
@@ -97,7 +97,7 @@ class TestShowLoginScreen:
 class TestShowStartScreen:
     """Tests for show_start_screen function."""
 
-    @patch('game.progress.get_max_unlocked_level', return_value=3)
+    @patch('plane_war_server.game.infrastructure.progress.get_max_unlocked_level', return_value=3)
     @patch('pygame.event.get')
     @patch('pygame.display.flip')
     @patch('pygame.time.Clock')
@@ -111,7 +111,7 @@ class TestShowStartScreen:
 
         assert result == 'QUIT'
 
-    @patch('game.progress.get_max_unlocked_level', return_value=3)
+    @patch('plane_war_server.game.infrastructure.progress.get_max_unlocked_level', return_value=3)
     @patch('pygame.mouse.get_pos', return_value=(400, 300))
     @patch('pygame.event.get')
     @patch('pygame.display.flip')

@@ -3,8 +3,8 @@
 import pytest
 from unittest.mock import patch, Mock, MagicMock
 import pygame
-from game.enemy import Enemy, EnemyBoss, compute_intercept_direction
-from game.settings import SCREEN_WIDTH, SCREEN_HEIGHT
+from plane_war_server.game.models.enemy import Enemy, EnemyBoss, compute_intercept_direction
+from plane_war_server.game.infrastructure.settings import SCREEN_WIDTH, SCREEN_HEIGHT
 
 
 class TestComputeInterceptDirection:

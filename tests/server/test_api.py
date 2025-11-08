@@ -6,7 +6,7 @@ login, logout, and score submission functionality.
 
 import json
 
-from server.models import Score, User
+from plane_war_server.data.models import Score, User
 
 
 def test_api_login_success(client, db):

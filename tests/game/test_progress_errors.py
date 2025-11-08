@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from game import progress
+from plane_war_server.game.infrastructure import progress
 
 
 @pytest.fixture()
@@ -19,4 +19,3 @@ def test_load_progress_invalid_json_defaults(temp_progress):
     Path(progress.PROGRESS_FILE_PATH).write_text("{ invalid", encoding="utf-8")
     data = progress.load_progress()
     assert data[progress.KEY_MAX_UNLOCKED_LEVEL] == progress.DEFAULT_MAX_UNLOCKED_LEVEL
-

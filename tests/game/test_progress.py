@@ -4,7 +4,7 @@ import pytest
 from unittest.mock import patch, mock_open, Mock
 import json
 import os
-from game import progress
+from plane_war_server.game.infrastructure import progress
 
 
 class TestLoadProgress:
@@ -60,7 +60,7 @@ class TestSaveProgress:
 class TestGetMaxUnlockedLevel:
     """Tests for get_max_unlocked_level function."""
 
-    @patch('game.progress.load_progress', return_value={"max_unlocked_level": 4})
+    @patch('plane_war_server.game.infrastructure.progress.load_progress', return_value={"max_unlocked_level": 4})
     def test_get_max_unlocked_level(self, mock_load):
         """Test getting max unlocked level."""
         result = progress.get_max_unlocked_level()
@@ -71,23 +71,23 @@ class TestGetMaxUnlockedLevel:
 class TestGetTotalAvailableLevelsCount:
     """Tests for get_total_available_levels_count function."""
 
-    @patch('game.progress.os.listdir', return_value=['level_1.json', 'level_2.json', 'level_3.json'])
-    @patch('game.progress.os.path.exists', return_value=True)
+    @patch('plane_war_server.game.infrastructure.progress.os.listdir', return_value=['level_1.json', 'level_2.json', 'level_3.json'])
+    @patch('plane_war_server.game.infrastructure.progress.os.path.exists', return_value=True)
     def test_get_total_available_levels_count_success(self, mock_exists, mock_listdir):
         """Test counting level files."""
         result = progress.get_total_available_levels_count()
 
         assert result == 3
 
-    @patch('game.progress.os.path.exists', return_value=False)
+    @patch('plane_war_server.game.infrastructure.progress.os.path.exists', return_value=False)
     def test_get_total_available_levels_count_missing_dir(self, mock_exists):
         """Test counting levels when directory missing."""
         result = progress.get_total_available_levels_count()
 
         assert result == 0
 
-    @patch('game.progress.os.listdir', return_value=['level_1.json', 'readme.txt', 'level_2.json'])
-    @patch('game.progress.os.path.exists', return_value=True)
+    @patch('plane_war_server.game.infrastructure.progress.os.listdir', return_value=['level_1.json', 'readme.txt', 'level_2.json'])
+    @patch('plane_war_server.game.infrastructure.progress.os.path.exists', return_value=True)
     def test_get_total_available_levels_count_filters_non_json(self, mock_exists, mock_listdir):
         """Test counting only JSON files."""
         result = progress.get_total_available_levels_count()
@@ -108,36 +108,36 @@ class TestGetLevelPath:
 class TestUnlockLevel:
     """Tests for unlock_level function."""
 
-    @patch('game.progress.get_total_available_levels_count', return_value=5)
-    @patch('game.progress.get_max_unlocked_level', return_value=2)
-    @patch('game.progress.save_progress')
+    @patch('plane_war_server.game.infrastructure.progress.get_total_available_levels_count', return_value=5)
+    @patch('plane_war_server.game.infrastructure.progress.get_max_unlocked_level', return_value=2)
+    @patch('plane_war_server.game.infrastructure.progress.save_progress')
     def test_unlock_level_unlocks_next_level(self, mock_save, mock_get_max, mock_count):
         """Test unlocking next level after completing current."""
         progress.unlock_level(2)
 
         mock_save.assert_called_once_with(3)
 
-    @patch('game.progress.get_total_available_levels_count', return_value=5)
-    @patch('game.progress.get_max_unlocked_level', return_value=5)
-    @patch('game.progress.save_progress')
+    @patch('plane_war_server.game.infrastructure.progress.get_total_available_levels_count', return_value=5)
+    @patch('plane_war_server.game.infrastructure.progress.get_max_unlocked_level', return_value=5)
+    @patch('plane_war_server.game.infrastructure.progress.save_progress')
     def test_unlock_level_already_at_max(self, mock_save, mock_get_max, mock_count):
         """Test unlocking when already at max level."""
         progress.unlock_level(4)
 
         assert not mock_save.called
 
-    @patch('game.progress.get_total_available_levels_count', return_value=3)
-    @patch('game.progress.get_max_unlocked_level', return_value=3)
-    @patch('game.progress.save_progress')
+    @patch('plane_war_server.game.infrastructure.progress.get_total_available_levels_count', return_value=3)
+    @patch('plane_war_server.game.infrastructure.progress.get_max_unlocked_level', return_value=3)
+    @patch('plane_war_server.game.infrastructure.progress.save_progress')
     def test_unlock_level_at_final_level(self, mock_save, mock_get_max, mock_count):
         """Test completing final level doesn't unlock beyond."""
         progress.unlock_level(3)
 
         assert not mock_save.called
 
-    @patch('game.progress.get_total_available_levels_count', return_value=5)
-    @patch('game.progress.get_max_unlocked_level', return_value=1)
-    @patch('game.progress.save_progress')
+    @patch('plane_war_server.game.infrastructure.progress.get_total_available_levels_count', return_value=5)
+    @patch('plane_war_server.game.infrastructure.progress.get_max_unlocked_level', return_value=1)
+    @patch('plane_war_server.game.infrastructure.progress.save_progress')
     def test_unlock_level_with_zero(self, mock_save, mock_get_max, mock_count):
         """Test unlocking with zero doesn't unlock next level."""
         progress.unlock_level(0)

@@ -7,18 +7,20 @@ distinct level retrieval.
 
 from datetime import datetime, timedelta
 
-from server.leaderboard_service import (
-    get_distinct_levels,
-    get_leaderboard_by_level,
-    get_overall_leaderboard,
-)
-from server.models import Score, User
+from plane_war_server.application.services.leaderboard_service import LeaderboardService
+from plane_war_server.data.repositories import LeaderboardRepository
+from plane_war_server.data.models import Score, User
+
+
+def _svc(db):
+    """Helper to construct a LeaderboardService bound to the test session."""
+    return LeaderboardService(LeaderboardRepository(db.session))
 
 
 def test_get_leaderboard_by_level_empty(db):
     """Test getting leaderboard for a level with no scores."""
     # Arrange & Act
-    leaderboard = get_leaderboard_by_level(1)
+    leaderboard = _svc(db).get_leaderboard_by_level(1)
 
     # Assert
     assert leaderboard == []
@@ -37,7 +39,7 @@ def test_get_leaderboard_by_level_single_user(db):
     db.session.commit()
 
     # Act
-    leaderboard = get_leaderboard_by_level(1)
+    leaderboard = _svc(db).get_leaderboard_by_level(1)
 
     # Assert
     assert len(leaderboard) == 1
@@ -66,7 +68,7 @@ def test_get_leaderboard_by_level_multiple_users(db):
     db.session.commit()
 
     # Act
-    leaderboard = get_leaderboard_by_level(1)
+    leaderboard = _svc(db).get_leaderboard_by_level(1)
 
     # Assert
     assert len(leaderboard) == 3
@@ -93,7 +95,7 @@ def test_get_leaderboard_by_level_uses_highest_score(db):
     db.session.commit()
 
     # Act
-    leaderboard = get_leaderboard_by_level(1)
+    leaderboard = _svc(db).get_leaderboard_by_level(1)
 
     # Assert
     assert len(leaderboard) == 1
@@ -123,7 +125,7 @@ def test_get_leaderboard_by_level_tie_breaking(db):
     db.session.commit()
 
     # Act
-    leaderboard = get_leaderboard_by_level(1)
+    leaderboard = _svc(db).get_leaderboard_by_level(1)
 
     # Assert
     assert len(leaderboard) == 2
@@ -145,8 +147,8 @@ def test_get_leaderboard_by_level_different_levels(db):
     db.session.commit()
 
     # Act
-    leaderboard_level1 = get_leaderboard_by_level(1)
-    leaderboard_level2 = get_leaderboard_by_level(2)
+    leaderboard_level1 = _svc(db).get_leaderboard_by_level(1)
+    leaderboard_level2 = _svc(db).get_leaderboard_by_level(2)
 
     # Assert
     assert len(leaderboard_level1) == 1
@@ -158,7 +160,7 @@ def test_get_leaderboard_by_level_different_levels(db):
 def test_get_overall_leaderboard_empty(db):
     """Test getting overall leaderboard with no scores."""
     # Arrange & Act
-    leaderboard = get_overall_leaderboard()
+    leaderboard = _svc(db).get_overall_leaderboard()
 
     # Assert
     assert leaderboard == []
@@ -177,7 +179,7 @@ def test_get_overall_leaderboard_single_user_single_level(db):
     db.session.commit()
 
     # Act
-    leaderboard = get_overall_leaderboard()
+    leaderboard = _svc(db).get_overall_leaderboard()
 
     # Assert
     assert len(leaderboard) == 1
@@ -201,7 +203,7 @@ def test_get_overall_leaderboard_single_user_multiple_levels(db):
     db.session.commit()
 
     # Act
-    leaderboard = get_overall_leaderboard()
+    leaderboard = _svc(db).get_overall_leaderboard()
 
     # Assert
     assert len(leaderboard) == 1
@@ -230,7 +232,7 @@ def test_get_overall_leaderboard_multiple_users(db):
     db.session.commit()
 
     # Act
-    leaderboard = get_overall_leaderboard()
+    leaderboard = _svc(db).get_overall_leaderboard()
 
     # Assert
     assert len(leaderboard) == 2
@@ -261,7 +263,7 @@ def test_get_overall_leaderboard_uses_highest_score_per_level(db):
     db.session.commit()
 
     # Act
-    leaderboard = get_overall_leaderboard()
+    leaderboard = _svc(db).get_overall_leaderboard()
 
     # Assert
     assert len(leaderboard) == 1
@@ -293,7 +295,7 @@ def test_get_overall_leaderboard_tie_breaking(db):
     db.session.commit()
 
     # Act
-    leaderboard = get_overall_leaderboard()
+    leaderboard = _svc(db).get_overall_leaderboard()
 
     # Assert
     assert len(leaderboard) == 2
@@ -304,7 +306,8 @@ def test_get_overall_leaderboard_tie_breaking(db):
 def test_get_distinct_levels_empty(db):
     """Test getting distinct levels with no scores."""
     # Arrange & Act
-    levels = get_distinct_levels()
+    # Distinct levels refers to DB-only distinct levels
+    levels = LeaderboardRepository(db.session).distinct_levels()
 
     # Assert
     assert levels == []
@@ -323,7 +326,7 @@ def test_get_distinct_levels_single_level(db):
     db.session.commit()
 
     # Act
-    levels = get_distinct_levels()
+    levels = LeaderboardRepository(db.session).distinct_levels()
 
     # Assert
     assert levels == [1]
@@ -344,7 +347,7 @@ def test_get_distinct_levels_multiple_levels(db):
     db.session.commit()
 
     # Act
-    levels = get_distinct_levels()
+    levels = LeaderboardRepository(db.session).distinct_levels()
 
     # Assert
     assert levels == [1, 2, 3]  # Should be sorted
@@ -368,7 +371,7 @@ def test_get_distinct_levels_no_duplicates(db):
     db.session.commit()
 
     # Act
-    levels = get_distinct_levels()
+    levels = LeaderboardRepository(db.session).distinct_levels()
 
     # Assert
     assert levels == [1, 2]
@@ -391,7 +394,7 @@ def test_get_leaderboard_by_level_limit_30(db):
     db.session.commit()
 
     # Act
-    leaderboard = get_leaderboard_by_level(1)
+    leaderboard = _svc(db).get_leaderboard_by_level(1)
 
     # Assert
     assert len(leaderboard) == 30
@@ -414,7 +417,7 @@ def test_get_overall_leaderboard_limit_30(db):
     db.session.commit()
 
     # Act
-    leaderboard = get_overall_leaderboard()
+    leaderboard = _svc(db).get_overall_leaderboard()
 
     # Assert
     assert len(leaderboard) == 30

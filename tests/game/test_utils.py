@@ -5,7 +5,7 @@ from unittest.mock import patch, mock_open, Mock
 import json
 import os
 import pygame
-from game.utils import (
+from plane_war_server.game.infrastructure.utils import (
     AssetLoader,
     load_high_score,
     save_high_score,
@@ -178,40 +178,40 @@ class TestLoadLevelData:
     """Tests for load_level_data function."""
 
     @patch('os.listdir', return_value=['level1.json', 'level2.json'])
-    @patch('os.path.exists', return_value=True)
+    @patch('os.path.isdir', return_value=True)
     @patch('builtins.open', new_callable=mock_open, read_data='{"level_number": 1, "music": "level1.mp3"}')
-    def test_load_level_data_success(self, mock_file, mock_exists, mock_listdir):
+    def test_load_level_data_success(self, mock_file, mock_isdir, mock_listdir):
         """Test loading level data from directory."""
-        result = load_level_data('levels')
+        result = load_level_data('src/plane_war_server/game/levels')
 
         assert len(result) == 2
 
-    @patch('os.path.exists', return_value=False)
-    def test_load_level_data_directory_missing(self, mock_exists):
+    @patch('os.path.isdir', return_value=False)
+    def test_load_level_data_directory_missing(self, mock_isdir):
         """Test loading level data when directory missing."""
         result = load_level_data('missing')
 
         assert result == []
 
     @patch('os.listdir', return_value=['level1.json', 'readme.txt'])
-    @patch('os.path.exists', return_value=True)
-    def test_load_level_data_filters_non_json(self, mock_exists, mock_listdir):
+    @patch('os.path.isdir', return_value=True)
+    def test_load_level_data_filters_non_json(self, mock_isdir, mock_listdir):
         """Test loading level data filters non-JSON files."""
-        with patch('game.utils._load_single_level_file', return_value={'level_number': 1}):
-            result = load_level_data('levels')
+        with patch('plane_war_server.game.infrastructure.utils._load_single_level_file', return_value={'level_number': 1}):
+            result = load_level_data('src/plane_war_server/game/levels')
 
         assert len(result) == 1
 
     @patch('os.listdir', return_value=['level2.json', 'level1.json', 'level3.json'])
-    @patch('os.path.exists', return_value=True)
-    def test_load_level_data_sorts_by_level_number(self, mock_exists, mock_listdir):
+    @patch('os.path.isdir', return_value=True)
+    def test_load_level_data_sorts_by_level_number(self, mock_isdir, mock_listdir):
         """Test level data is sorted by level_number."""
-        with patch('game.utils._load_single_level_file', side_effect=[
+        with patch('plane_war_server.game.infrastructure.utils._load_single_level_file', side_effect=[
             {'level_number': 2},
             {'level_number': 1},
             {'level_number': 3}
         ]):
-            result = load_level_data('levels')
+            result = load_level_data('src/plane_war_server/game/levels')
 
         assert result[0]['level_number'] == 1
         assert result[1]['level_number'] == 2

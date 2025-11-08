@@ -3,7 +3,7 @@
 import pytest
 from unittest.mock import patch, Mock
 import pygame
-from game.explosion import Explosion, create_explosion
+from plane_war_server.game.models.explosion import Explosion, create_explosion
 
 
 class TestExplosionInit:

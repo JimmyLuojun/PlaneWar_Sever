@@ -13,7 +13,9 @@ keywords = ["pygame", "game", "shooter", "arcade", "flask", "networked"] # Added
 
 # --- Crucial: Define the packages within this project ---
 # Tells Poetry where to find the Python code relative to this file
-packages = [{include = "game"}, {include = "server"}]
+packages = [
+    { include = "plane_war_server", from = "src" }
+]
 
 [tool.poetry.dependencies]
 python = "^3.10" # Keep your original Python requirement
@@ -42,29 +44,20 @@ mysql = ["mysqlclient"]
 
 # --- Development Dependencies ---
 [tool.poetry.group.dev.dependencies]
-ruff = "^0.4.4" # Keep your linter/formatter
-# pytest = "^8.1.1" # Uncomment if you add tests
-
-# --- Optional: Scripts for easy running ---
-# Run these from the PlaneWar_Server/ directory using `poetry run <script_name>`
+ruff = "^0.4.4"
+basedpyright = "^1.18.0"
 pytest = "^8.3.5"
 pytest-mock = "^3.14.0"
 requests-mock = "^1.12.1"
 pytest-cov = "^7.0.0"
 [tool.poetry.scripts]
-run-planewar-game = "game.main:main"
-run-planewar-server = "server.app:run_dev_server" # Assumes run_dev_server func in server/app.py
+run-planewar-game = "plane_war_server.game.main:main"
+run-planewar-server = "plane_war_server.main:run_dev_server"
 
 # --- Pytest Configuration ---
 [tool.pytest.ini_options]
 # Automatically run with coverage
-addopts = [
-    "--cov=game",
-    "--cov=server",
-    "--cov-report=term-missing",
-    "--cov-report=html",
-    "-v"
-]
+addopts = ["-v", "--cov-report=term-missing", "--cov-report=html"]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
@@ -72,7 +65,7 @@ python_functions = ["test_*"]
 
 # --- Coverage Configuration ---
 [tool.coverage.run]
-source = ["game", "server"]
+source = ["game", "src/plane_war_server"]
 omit = [
     "*/tests/*",
     "*/__pycache__/*",
@@ -93,6 +86,30 @@ exclude_lines = [
     "if TYPE_CHECKING:",
     "@abstractmethod",
 ]
+
+# --- Ruff Configuration ---
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP"]
+ignore = ["E501"]  # Line too long (handled by formatter)
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+# --- Basedpyright Configuration ---
+[tool.basedpyright]
+pythonVersion = "3.11"
+typeCheckingMode = "standard"
+reportMissingTypeStubs = false
+reportUnknownMemberType = false
+reportUnknownVariableType = false
+reportUnknownArgumentType = false
+include = ["src", "tests"]
+exclude = ["**/__pycache__", "**/node_modules", ".venv"]
 
 # --- Build System Configuration ---
 [build-system]

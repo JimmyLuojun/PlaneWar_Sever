@@ -3,8 +3,8 @@
 import pytest
 from unittest.mock import patch, Mock
 import pygame
-from game.powerup import PowerUp
-from game.settings import SCREEN_HEIGHT
+from plane_war_server.game.models.powerup import PowerUp
+from plane_war_server.game.infrastructure.settings import SCREEN_HEIGHT
 
 
 class TestPowerUpInit:

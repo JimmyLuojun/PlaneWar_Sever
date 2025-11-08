@@ -8,7 +8,7 @@ os.environ['SDL_AUDIODRIVER'] = 'dummy'
 import pytest
 from unittest.mock import Mock, MagicMock, patch
 import pygame
-from game import states
+from plane_war_server.game.controllers import state_machine as states
 
 
 class TestRunStateMachine:
@@ -46,7 +46,7 @@ class TestRunStateMachine:
             'network_client': network_client
         }
 
-    @patch('game.states.ui')
+    @patch('plane_war_server.game.controllers.state_machine.ui')
     def test_run_state_machine_login_then_quit(self, mock_ui, mock_dependencies):
         """Test state machine handles login success then quit."""
         # Arrange
@@ -58,7 +58,7 @@ class TestRunStateMachine:
         # Assert
         mock_ui.show_login_screen.assert_called_once()
 
-    @patch('game.states.ui')
+    @patch('plane_war_server.game.controllers.state_machine.ui')
     def test_run_state_machine_login_success_then_level_select(self, mock_ui, mock_dependencies):
         """Test state machine handles login success and level selection."""
         # Arrange
@@ -72,8 +72,8 @@ class TestRunStateMachine:
         mock_ui.show_login_screen.assert_called_once()
         mock_ui.show_start_screen.assert_called_once()
 
-    @patch('game.states.run_game')
-    @patch('game.states.ui')
+    @patch('plane_war_server.game.controllers.state_machine.run_game')
+    @patch('plane_war_server.game.controllers.state_machine.ui')
     def test_run_state_machine_complete_level_flow(self, mock_ui, mock_run_game, mock_dependencies):
         """Test state machine handles complete level flow."""
         # Arrange
@@ -96,7 +96,7 @@ class TestRunStateMachine:
         assert mock_run_game.call_count == 2
         mock_ui.show_end_screen.assert_called_once()
 
-    @patch('game.states.ui')
+    @patch('plane_war_server.game.controllers.state_machine.ui')
     def test_run_state_machine_login_fail(self, mock_ui, mock_dependencies):
         """Test state machine handles login failure."""
         # Arrange
@@ -111,8 +111,8 @@ class TestRunStateMachine:
         # Assert
         assert mock_ui.show_login_screen.call_count == 2
 
-    @patch('game.states.run_game')
-    @patch('game.states.ui')
+    @patch('plane_war_server.game.controllers.state_machine.run_game')
+    @patch('plane_war_server.game.controllers.state_machine.ui')
     def test_run_state_machine_level_failed(self, mock_ui, mock_run_game, mock_dependencies):
         """Test state machine handles level failure."""
         # Arrange
@@ -131,8 +131,8 @@ class TestRunStateMachine:
         call_args = mock_ui.show_end_screen.call_args
         assert 'LOSE' in call_args[0] or 'LOSE' in str(call_args)
 
-    @patch('game.states.run_game')
-    @patch('game.states.ui')
+    @patch('plane_war_server.game.controllers.state_machine.run_game')
+    @patch('plane_war_server.game.controllers.state_machine.ui')
     def test_run_state_machine_replay_after_loss(self, mock_ui, mock_run_game, mock_dependencies):
         """Test state machine handles replay after losing."""
         # Arrange
@@ -148,8 +148,8 @@ class TestRunStateMachine:
         # Assert
         assert mock_ui.show_start_screen.call_count == 2
 
-    @patch('game.states.run_game')
-    @patch('game.states.ui')
+    @patch('plane_war_server.game.controllers.state_machine.run_game')
+    @patch('plane_war_server.game.controllers.state_machine.ui')
     @patch('pygame.mixer')
     def test_run_state_machine_music_management(self, mock_mixer, mock_ui, mock_run_game, mock_dependencies):
         """Test state machine manages music correctly."""
@@ -169,8 +169,8 @@ class TestRunStateMachine:
         mock_music.stop.assert_called()
         mock_music.unload.assert_called()
 
-    @patch('game.states.run_game')
-    @patch('game.states.ui')
+    @patch('plane_war_server.game.controllers.state_machine.run_game')
+    @patch('plane_war_server.game.controllers.state_machine.ui')
     def test_run_state_machine_level_selection_level_2(self, mock_ui, mock_run_game, mock_dependencies):
         """Test state machine handles selection of level 2."""
         # Arrange
@@ -190,8 +190,8 @@ class TestRunStateMachine:
         level_data = call_args[0][5]  # level_data is the 6th argument (index 5)
         assert level_data['level_number'] == 2
 
-    @patch('game.states.run_game')
-    @patch('game.states.ui')
+    @patch('plane_war_server.game.controllers.state_machine.run_game')
+    @patch('plane_war_server.game.controllers.state_machine.ui')
     def test_run_state_machine_invalid_level_selection(self, mock_ui, mock_run_game, mock_dependencies):
         """Test state machine handles invalid level selection."""
         # Arrange
@@ -207,9 +207,9 @@ class TestRunStateMachine:
         # run_game should not be called
         mock_run_game.assert_not_called()
 
-    @patch('game.states.utils')
-    @patch('game.states.run_game')
-    @patch('game.states.ui')
+    @patch('plane_war_server.game.controllers.state_machine.utils')
+    @patch('plane_war_server.game.controllers.state_machine.run_game')
+    @patch('plane_war_server.game.controllers.state_machine.ui')
     def test_run_state_machine_high_score_update(self, mock_ui, mock_run_game, mock_utils, mock_dependencies):
         """Test state machine updates high score."""
         # Arrange
@@ -228,8 +228,8 @@ class TestRunStateMachine:
         # Should save new high score
         mock_utils.save_high_score.assert_called()
 
-    @patch('game.states.run_game')
-    @patch('game.states.ui')
+    @patch('plane_war_server.game.controllers.state_machine.run_game')
+    @patch('plane_war_server.game.controllers.state_machine.ui')
     def test_run_state_machine_all_levels_completed(self, mock_ui, mock_run_game, mock_dependencies):
         """Test state machine handles completing all levels."""
         # Arrange

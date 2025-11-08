@@ -5,6 +5,12 @@ import sys
 import pytest
 from unittest.mock import Mock, MagicMock, patch
 
+# Ensure src/ is importable for plane_war_server package during tests
+_repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+_src_dir = os.path.join(_repo_root, "src")
+if _src_dir not in sys.path:
+    sys.path.insert(0, _src_dir)
+
 # Set SDL to use dummy video driver to prevent actual windows from opening
 os.environ['SDL_VIDEODRIVER'] = 'dummy'
 os.environ['SDL_AUDIODRIVER'] = 'dummy'

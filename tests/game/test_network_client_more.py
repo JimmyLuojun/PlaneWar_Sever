@@ -6,7 +6,7 @@ from unittest.mock import patch, Mock
 
 import requests
 
-from game.network_client import NetworkClient
+from plane_war_server.game.network_client import NetworkClient
 
 
 @patch("requests.Session.post")
@@ -84,4 +84,3 @@ def test_get_leaderboard_json_decode_error(mock_get):
     mock_get.return_value = resp
     res = client.get_leaderboard()
     assert res == []
-

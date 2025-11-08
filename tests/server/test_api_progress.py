@@ -2,8 +2,8 @@
 
 from flask import url_for
 
-from server.models import User
-from server import progress_store as ps
+from plane_war_server.data.models import User
+from plane_war_server.data import progress_store as ps
 
 
 def test_progress_endpoints_require_auth(client):
@@ -70,4 +70,3 @@ def test_submit_score_session_auth(client, db):
     r = client.post("/api/submit_score", json={"score": 1234, "level": 2})
     # 201 Created
     assert r.status_code == 201
-

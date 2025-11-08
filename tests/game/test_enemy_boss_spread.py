@@ -3,7 +3,7 @@
 from unittest.mock import Mock, MagicMock
 import pygame
 
-from game.enemy import EnemyBoss
+from plane_war_server.game.models.enemy import EnemyBoss
 
 
 def test_boss_triple_shot_spread_creates_three_bullets(mock_image):

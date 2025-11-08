@@ -2,7 +2,7 @@
 
 from unittest.mock import patch, Mock
 
-from game import states
+from plane_war_server.game.controllers import state_machine as states
 
 
 import pygame
@@ -39,8 +39,8 @@ def deps():
     }
 
 
-@patch("game.states.ui")
-@patch("game.states.progress")
+@patch("plane_war_server.game.controllers.state_machine.ui")
+@patch("plane_war_server.game.controllers.state_machine.progress")
 def test_login_fetches_progress(mock_progress, mock_ui, deps):
     # Arrange: login succeeds, then quit at start screen
     mock_ui.show_login_screen.return_value = ("LOGIN_SUCCESS", "tester", "ok")
@@ -59,9 +59,9 @@ def test_login_fetches_progress(mock_progress, mock_ui, deps):
     mock_progress.save_progress.assert_called_with(4)
 
 
-@patch("game.states.run_game")
-@patch("game.states.ui")
-@patch("game.states.progress")
+@patch("plane_war_server.game.controllers.state_machine.run_game")
+@patch("plane_war_server.game.controllers.state_machine.ui")
+@patch("plane_war_server.game.controllers.state_machine.progress")
 def test_set_progress_after_pass(mock_progress, mock_ui, mock_run_game, deps):
     # Arrange: login -> level 1 -> pass -> end -> quit
     mock_ui.show_login_screen.return_value = ("LOGIN_SUCCESS", "tester", "ok")

@@ -3,8 +3,8 @@
 import pytest
 from unittest.mock import patch, Mock
 import pygame
-from game.bullet import Bullet, EnemyBullet
-from game.settings import SCREEN_HEIGHT, SCREEN_WIDTH
+from plane_war_server.game.models.bullet import Bullet, EnemyBullet
+from plane_war_server.game.infrastructure.settings import SCREEN_HEIGHT, SCREEN_WIDTH
 
 
 class TestBullet:

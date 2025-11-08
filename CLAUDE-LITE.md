@@ -13,6 +13,23 @@
 
 ## File Structure (Simple Scripts)
 
+**REQUIRED: Visual Section Markers**
+
+Even for lightweight scripts, you **MUST** use visual section markers to clearly delineate code sections. This improves readability and maintainability.
+
+**Format**: Use three-line section markers with equals signs:
+```
+# ============================================================================
+# Section Name
+# ============================================================================
+```
+
+**Rules**:
+- Replace simple numbered comments (e.g., `# 1. Imports`) with visual markers
+- Only include markers for sections that actually exist in your file
+- Use clear, descriptive section names
+- This is **mandatory**, not optional
+
 ### Procedural Scripts (Most Common)
 ```python
 """
@@ -240,6 +257,7 @@ time.sleep(2)
 
 ### Before Committing
 - [ ] Script has module docstring
+- [ ] **Visual section markers (`# ============`) used for all sections**
 - [ ] Functions have type hints
 - [ ] Main logic in `main()` function
 - [ ] Has `if __name__ == "__main__":` block

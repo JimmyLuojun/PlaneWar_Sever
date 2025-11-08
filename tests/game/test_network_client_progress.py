@@ -2,7 +2,7 @@
 
 from unittest.mock import patch, Mock
 
-from game.network_client import NetworkClient
+from plane_war_server.game.network_client import NetworkClient
 
 
 @patch("requests.Session.get")
@@ -29,4 +29,3 @@ def test_set_progress_success(mock_post):
 
     res = client.set_progress(6)
     assert res.success and res.max_unlocked_level == 6
-

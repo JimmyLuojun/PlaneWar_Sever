@@ -3,8 +3,8 @@
 from unittest.mock import patch
 import pygame
 
-from game.powerup import PowerUp
-from game.settings import POWERUP_WIDTH, POWERUP_HEIGHT
+from plane_war_server.game.models.powerup import PowerUp
+from plane_war_server.game.infrastructure.settings import POWERUP_WIDTH, POWERUP_HEIGHT
 
 
 @patch("random.choice", return_value="bomb")
@@ -14,4 +14,3 @@ def test_powerup_fallback_surface_created(mock_choice):
     assert isinstance(p.image, pygame.Surface)
     assert p.image.get_width() == POWERUP_WIDTH
     assert p.image.get_height() == POWERUP_HEIGHT
-

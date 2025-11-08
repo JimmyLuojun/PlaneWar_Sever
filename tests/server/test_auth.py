@@ -6,7 +6,7 @@ registration, login, and logout functionality.
 
 from flask import url_for
 
-from server.models import User
+from plane_war_server.data.models import User
 
 
 def test_register(client, db):

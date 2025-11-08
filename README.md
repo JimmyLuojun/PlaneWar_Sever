@@ -1,60 +1,42 @@
-# PlaneWar - Multiplayer Arcade Shooter Game 🎮
+# PlaneWar — Multiplayer Arcade Shooter 🎮
 
-A complete multiplayer plane war game with server-side functionality for score tracking, user management, and leaderboards. Built with Pygame for the client and Flask for the server.
-
-**Recently Refactored**: The project has been restructured following modern software engineering practices with event-driven architecture, comprehensive test coverage (18 test modules), and modular design patterns.
+Networked plane shooter with a Flask server (auth, scores, leaderboards) and a Pygame client. The codebase follows a layered structure with clear separation between presentation, application, data, and infrastructure.
 
 ## 🏗️ Project Structure
 
 ```
-PlaneWar_Sever/
-├── game/                     # Pygame client
-│   ├── main.py              # Main game entry point
-│   ├── assets.py            # Asset loading and resource caching
-│   ├── loop.py              # Event-driven game loop orchestration
-│   ├── states.py            # Application state machine (login, start, running, end)
-│   ├── progress.py          # Player progression tracking and level unlocking
-│   ├── player.py            # Player sprite & logic
-│   ├── enemy.py             # Enemy AI & behavior
-│   ├── bullet.py            # Bullet physics
-│   ├── powerup.py           # Power-up items
-│   ├── explosion.py         # Explosion visual effects
-│   ├── background.py        # Scrolling background
-│   ├── ui.py                # User interface screens
-│   ├── network_client.py    # Server communication
-│   ├── settings.py          # Game configuration
-│   ├── utils.py             # Utility functions
-│   ├── levels/              # Level configurations (JSON files)
-│   │   ├── level_1.json
-│   │   ├── level_2.json
-│   │   ├── level_3.json
-│   │   └── level_4.json
-│   └── media/               # Game assets
-│       ├── images/          # Sprites and backgrounds
-│       ├── sounds/          # Sound effects and music
-│       └── fonts/           # Game fonts
-├── server/                  # Flask server
-│   ├── app.py               # Application factory
-│   ├── config.py            # Configuration management (Dev, Prod, Test)
-│   ├── extensions.py        # Flask extensions initialization
-│   ├── api.py               # REST API endpoints
-│   ├── auth.py              # Authentication routes
-│   ├── models.py            # Database models (User, Score)
-│   ├── views.py             # Web page routes
-│   ├── leaderboard_service.py  # Leaderboard business logic
-│   ├── templates/           # HTML templates
-│   │   ├── base.html
-│   │   ├── game.html
-│   │   ├── leaderboard.html
-│   │   └── auth/
-│   │       ├── login.html
-│   │       └── register.html
-│   └── static/              # CSS styles
-│       └── style.css
+PlaneWar_Server/
+├── src/
+│   └── plane_war_server/       # App package (Flask server + game client)
+│       ├── main.py             # Flask app factory + dev entry
+│       ├── config.py           # Environment-driven configuration
+│       ├── infrastructure/
+│       │   └── extensions.py
+│       ├── data/
+│       │   ├── models.py
+│       │   ├── repositories.py
+│       │   └── progress_store.py
+│       ├── application/
+│       │   └── services/
+│       │       ├── auth_service.py
+│       │       ├── leaderboard_service.py
+│       │       └── progress_service.py
+│       ├── presentation/
+│       │   └── routes/
+│       │       ├── api.py
+│       │       ├── auth.py
+│       │       └── views.py
+│       ├── templates/          # Jinja templates
+│       ├── static/             # CSS/JS/assets
+│       └── game/               # Pygame client
+│           ├── main.py         # Game entry point
+│           ├── assets.py, loop.py, states.py, ...
+│           ├── levels/         # Level configs (JSON)
+│           └── media/          # Images, sounds, fonts
 ├── migrations/              # Database migrations (Alembic)
 │   ├── versions/            # Migration scripts
 │   └── alembic.ini          # Alembic configuration
-├── tests/                   # Comprehensive test suite (18 modules)
+├── tests/                   # Test suite (unit + integration)
 │   ├── game/                # Game client tests (12 modules)
 │   │   ├── test_assets.py
 │   │   ├── test_background.py
@@ -84,7 +66,7 @@ PlaneWar_Sever/
 
 ### Prerequisites
 - Python 3.10+
-- Poetry (Python package manager)
+- Poetry
 
 ### Installation
 
@@ -96,17 +78,20 @@ curl -sSL https://install.python-poetry.org | python3 -
 2. **Clone and setup the project**:
 ```bash
 git clone <repository-url>
-cd PlaneWar_Sever
+cd PlaneWar_Server
 poetry install
 ```
 
-3. **Configure environment** (`.env` file is already included):
+3. **Configure environment** (`.env` or copy from `.env.example`):
 ```bash
-# The .env file contains:
-FLASK_APP=server.app
+# Minimal required
+FLASK_APP=plane_war_server:create_app
 FLASK_ENV=development
-DATABASE_URL=sqlite:///server/database.db
-SECRET_KEY=garkEv-wocgor-wahko5
+SECRET_KEY=change-me-in-prod   # Use a strong random value in production
+
+# Optional database URL (defaults to a local SQLite file)
+# DATABASE_URL=sqlite:///database.db
+# DATABASE_URL=postgresql://user:pass@localhost:5432/planewar
 ```
 
 4. **Initialize database**:
@@ -116,9 +101,9 @@ poetry run flask db upgrade
 
 ## 🎮 Running the Game
 
-### Option 1: Run Game Only (Recommended for testing)
+### Option 1: Run Game Only (recommended for testing)
 ```bash
-poetry run python -m game.main
+poetry run python -m plane_war_server.game.main
 ```
 
 ### Option 2: Full Server + Game Experience
@@ -127,7 +112,7 @@ poetry run python -m game.main
 poetry run flask run --host=0.0.0.0 --port=8000
 
 # Terminal 2 - Start the game client
-poetry run python -m game.main
+poetry run python -m plane_war_server.game.main
 ```
 
 ### Option 3: Using Poetry Scripts
@@ -142,7 +127,7 @@ poetry run run-planewar-server
 ## 🎯 Game Features
 
 ### Core Gameplay
-- **4 Progressive Levels** with increasing difficulty
+- **6 Progressive Levels** with increasing difficulty
 - **Multiple Enemy Types** (Enemy1-4 + Boss enemies)
 - **Power-up System** (Shield, Double Shot, Bomb)
 - **Boss Battles** with unique mechanics
@@ -165,8 +150,7 @@ poetry run run-planewar-server
 The project follows modern software engineering practices with clear separation of concerns:
 
 ### Architecture Docs
-- See `AGENTS.md` for agent-facing coding rules that Codex follows.
-- See `docs/architecture/layered-order.md` for the full Refined Layered Order spec and file order.
+- See `CLAUDE-STANDARD.md` for the coding guide followed in this repo.
 
 ### Game Architecture (Event-Driven Pattern)
 - **assets.py** - Centralized resource loader for all game assets (images, sounds, fonts, level data)
@@ -175,14 +159,11 @@ The project follows modern software engineering practices with clear separation 
 - **progress.py** - Persistent player progression system tracking unlocked levels and scores
 - **explosion.py** - Particle effect system for visual feedback
 
-### Server Architecture (MVC Pattern)
-- **config.py** - Environment-based configuration (Development, Production, Testing)
-- **extensions.py** - Centralized Flask extension initialization (SQLAlchemy, Migrate, Login, Bcrypt)
-- **leaderboard_service.py** - Business logic layer separating data access from API routes
-- **models.py** - SQLAlchemy ORM models (User, Score)
-- **api.py** - RESTful API endpoints for game client communication
-- **auth.py** - User authentication and session management
-- **views.py** - Web page routes for leaderboard viewing
+### Server Architecture (Layered)
+- **presentation/** - Blueprints and HTTP handlers (api, auth, views)
+- **application/** - Use-case services (auth, leaderboard, progress)
+- **data/** - ORM models, repositories, progress store
+- **infrastructure/** - Flask extensions and wiring
 
 ### Testing Strategy
 All tests follow the **AAA (Arrange-Act-Assert)** pattern:
@@ -202,7 +183,7 @@ poetry run pytest tests/game/     # Game client tests (12 modules)
 poetry run pytest tests/server/   # Server tests (6 modules)
 
 # Run with coverage report
-poetry run pytest --cov=game --cov=server
+poetry run pytest
 
 # Run specific test file
 poetry run pytest tests/game/test_player.py -v
@@ -210,14 +191,11 @@ poetry run pytest tests/game/test_player.py -v
 
 ### Code Quality
 ```bash
-# Format code
-poetry run ruff format .
-
 # Lint code
 poetry run ruff check .
 
-# Type checking (if using mypy)
-poetry run mypy .
+# Format code (if using ruff format)
+poetry run ruff format .
 ```
 
 ### Database Management
@@ -245,6 +223,8 @@ poetry run flask db upgrade
 - `POST /api/submit_score` - Score submission
 - `POST /api/logout` - User logout
 - `GET /api/leaderboard` - Leaderboard data
+- `GET /api/progress` - Get max unlocked level (auth required)
+- `POST /api/progress` - Set max unlocked level (auth required)
 
 ## 🎮 Game Controls
 
@@ -294,26 +274,16 @@ python --version  # Should be 3.10+
 FLASK_ENV=development poetry run flask run --debug
 
 # Run game with verbose logging
-poetry run python -m game.main --debug
+poetry run python -m plane_war_server.game.main --debug
 ```
 
-## 📊 Project Statistics
+## ⚙️ Configuration
 
-- **Total Files**: 80+ files (excluding cache/build files)
-- **Python Modules**: 47+ files
-  - Game modules: 16 files
-  - Server modules: 9 files
-  - Test modules: 18 files
-- **Game Assets**: 30+ media files
-  - Images: 10 sprite/background files
-  - Sounds: 10+ audio files
-  - Fonts: Game typography assets
-- **Test Coverage**: Comprehensive test suite with 18 test modules
-  - Game tests: 12 modules (AAA pattern)
-  - Server tests: 6 modules (AAA pattern)
-- **Database**: SQLite with Alembic migrations (2 versions)
-- **Dependencies**: Managed by Poetry
-- **Architecture**: Event-driven game loop, MVC server pattern
+Environment variables consumed by the server (see `.env.example`):
+- `FLASK_APP` — should be `plane_war_server:create_app`
+- `FLASK_ENV` — one of `development`, `production`, `testing`
+- `SECRET_KEY` — required in production
+- `DATABASE_URL` — SQLAlchemy URL (optional; defaults to SQLite file)
 
 ## 🤝 Contributing
 

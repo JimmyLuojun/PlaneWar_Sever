@@ -6,7 +6,7 @@ index, leaderboard, and game pages.
 
 from flask import url_for
 
-from server.models import Score, User
+from plane_war_server.data.models import Score, User
 
 
 def test_index_redirects_to_login_when_not_authenticated(client, db):

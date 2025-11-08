@@ -3,15 +3,15 @@
 import pytest
 from unittest.mock import patch, Mock, MagicMock
 import pygame
-from game.background import Background
+from plane_war_server.game.models.background import Background
 
 
 class TestBackgroundInit:
     """Tests for Background initialization."""
 
-    @patch('game.background.pygame.image.load')
-    @patch('game.background.pygame.transform.scale')
-    @patch('game.background.os.path.exists', return_value=True)
+    @patch('plane_war_server.game.models.background.pygame.image.load')
+    @patch('plane_war_server.game.models.background.pygame.transform.scale')
+    @patch('plane_war_server.game.models.background.os.path.exists', return_value=True)
     def test_init_with_valid_image(self, mock_exists, mock_scale, mock_load, mock_image):
         """Test initialization with valid image path."""
         # Mock the loaded image
@@ -33,7 +33,7 @@ class TestBackgroundInit:
         assert bg.y1 == 0
         assert bg.y2 == -600
 
-    @patch('game.background.os.path.exists', return_value=False)
+    @patch('plane_war_server.game.models.background.os.path.exists', return_value=False)
     def test_init_with_missing_image(self, mock_exists):
         """Test initialization with missing image creates fallback."""
         bg = Background('missing.png', 800, 600, 2)
@@ -47,9 +47,9 @@ class TestBackgroundInit:
 class TestBackgroundUpdate:
     """Tests for Background.update method."""
 
-    @patch('game.background.pygame.image.load')
-    @patch('game.background.pygame.transform.scale')
-    @patch('game.background.os.path.exists', return_value=True)
+    @patch('plane_war_server.game.models.background.pygame.image.load')
+    @patch('plane_war_server.game.models.background.pygame.transform.scale')
+    @patch('plane_war_server.game.models.background.os.path.exists', return_value=True)
     def test_update_moves_background_down(self, mock_exists, mock_scale, mock_load, mock_image):
         """Test update moves background positions downward."""
         # Mock the loaded image
@@ -72,9 +72,9 @@ class TestBackgroundUpdate:
         assert bg.y1 == initial_y1 + 2
         assert bg.y2 == initial_y2 + 2
 
-    @patch('game.background.pygame.image.load')
-    @patch('game.background.pygame.transform.scale')
-    @patch('game.background.os.path.exists', return_value=True)
+    @patch('plane_war_server.game.models.background.pygame.image.load')
+    @patch('plane_war_server.game.models.background.pygame.transform.scale')
+    @patch('plane_war_server.game.models.background.os.path.exists', return_value=True)
     def test_update_loops_y1_position(self, mock_exists, mock_scale, mock_load, mock_image):
         """Test y1 loops when scrolling off bottom."""
         # Mock the loaded image
@@ -97,9 +97,9 @@ class TestBackgroundUpdate:
         # After update, y1 becomes 600 (>= 600), so loops: y1 = (y2+2) - 600
         assert bg.y1 == (initial_y2 + 2) - 600
 
-    @patch('game.background.pygame.image.load')
-    @patch('game.background.pygame.transform.scale')
-    @patch('game.background.os.path.exists', return_value=True)
+    @patch('plane_war_server.game.models.background.pygame.image.load')
+    @patch('plane_war_server.game.models.background.pygame.transform.scale')
+    @patch('plane_war_server.game.models.background.os.path.exists', return_value=True)
     def test_update_loops_y2_position(self, mock_exists, mock_scale, mock_load, mock_image):
         """Test y2 loops when scrolling off bottom."""
         # Mock the loaded image
@@ -126,9 +126,9 @@ class TestBackgroundUpdate:
 class TestBackgroundDraw:
     """Tests for Background.draw method."""
 
-    @patch('game.background.pygame.image.load')
-    @patch('game.background.pygame.transform.scale')
-    @patch('game.background.os.path.exists', return_value=True)
+    @patch('plane_war_server.game.models.background.pygame.image.load')
+    @patch('plane_war_server.game.models.background.pygame.transform.scale')
+    @patch('plane_war_server.game.models.background.os.path.exists', return_value=True)
     def test_draw_blits_both_images(self, mock_exists, mock_scale, mock_load, mock_image, mock_surface):
         """Test draw blits both background images."""
         # Mock the loaded image
@@ -151,9 +151,9 @@ class TestBackgroundDraw:
 class TestBackgroundLoadAndScaleImage:
     """Tests for Background._load_and_scale_image helper."""
 
-    @patch('game.background.pygame.image.load')
-    @patch('game.background.pygame.transform.scale')
-    @patch('game.background.os.path.exists', return_value=True)
+    @patch('plane_war_server.game.models.background.pygame.image.load')
+    @patch('plane_war_server.game.models.background.pygame.transform.scale')
+    @patch('plane_war_server.game.models.background.os.path.exists', return_value=True)
     def test_scales_image_to_screen_height(self, mock_exists, mock_scale, mock_load, mock_image):
         """Test image is scaled to match screen height."""
         # Mock the loaded image

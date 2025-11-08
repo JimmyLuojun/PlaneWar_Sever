@@ -6,9 +6,9 @@ other test modules. This ensures a clean, isolated environment for each test.
 
 import pytest
 
-from server.app import create_app
-from server.config import TestConfig
-from server.extensions import db as _db
+from plane_war_server.main import create_app
+from plane_war_server.config import TestConfig
+from plane_war_server.infrastructure.extensions import db as _db
 
 
 @pytest.fixture

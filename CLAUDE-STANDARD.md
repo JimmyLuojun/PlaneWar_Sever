@@ -180,12 +180,40 @@ Why we chose X over Y.
 
 ## File Organization (Universal Order)
 
-Every Python module should follow this order:
+Every Python module **MUST** follow this order:
+
+1. **Module docstring** — What this file does
+2. **Imports** — Dependencies (grouped: stdlib, third-party, local)
+3. **Type Definitions** — DTOs, Protocols/ABCs, schemas
+4. **Constants** — Configuration values
+5. **Exceptions** — Custom errors
+6. **Data Models** — Dataclasses/entities/ORM models
+7. **Helper Functions** — Private utilities
+8. **Core Logic** — Main functionality for the layer
+9. **Public API** — Exports/facade/blueprint
+10. **Main** — Script/entry point (when applicable)
+
+**REQUIRED: Visual Section Markers**
+
+You **MUST** use visual section markers to clearly delineate each section that exists in your file. This improves code readability and navigation.
+
+**Format**: Use three-line section markers with equals signs:
+```
+# ============================================================================
+# Section Name
+# ============================================================================
+```
+
+**Rules for Visual Section Markers**:
+- Only include markers for sections that actually exist in your file
+- Use clear, descriptive section names matching the universal order above
+- Maintain consistent spacing (one blank line before and after each marker)
+- Section markers make code navigation easy with editor search or grep
+- This is a **mandatory** requirement, not optional
 
 ```python
 """Module docstring: What this module does."""
 
-# 1. Imports (grouped: stdlib, third-party, local)
 import sys
 from pathlib import Path
 
@@ -195,22 +223,38 @@ from sqlalchemy import select
 from my_project.data.models import User
 from my_project.config import settings
 
-# 2. Type definitions
+
+# ============================================================================
+# Type Definitions
+# ============================================================================
+
 from typing import Protocol
 
 class UserRepository(Protocol):
     """Interface for user data access."""
     def get(self, user_id: int) -> User | None: ...
 
-# 3. Constants
+
+# ============================================================================
+# Constants
+# ============================================================================
+
 MAX_PAGE_SIZE = 100
 DEFAULT_TIMEOUT = 30
 
-# 4. Exceptions
+
+# ============================================================================
+# Exceptions
+# ============================================================================
+
 class UserNotFoundError(Exception):
     """Raised when user doesn't exist."""
 
-# 5. Data classes / Models
+
+# ============================================================================
+# Data Models
+# ============================================================================
+
 from dataclasses import dataclass
 
 @dataclass
@@ -218,12 +262,20 @@ class UserDTO:
     id: int
     email: str
 
-# 6. Helper functions
+
+# ============================================================================
+# Helper Functions
+# ============================================================================
+
 def _validate_email(email: str) -> bool:
     """Private helper to validate email format."""
     return "@" in email
 
-# 7. Core logic (classes, main functions)
+
+# ============================================================================
+# Core Logic
+# ============================================================================
+
 class UserService:
     """Handles user business logic."""
 
@@ -236,7 +288,11 @@ class UserService:
             raise UserNotFoundError(f"User {user_id} not found")
         return UserDTO(id=user.id, email=user.email)
 
-# 8. Public API / exports
+
+# ============================================================================
+# Public API
+# ============================================================================
+
 __all__ = ["UserService", "UserDTO", "UserNotFoundError"]
 ```
 
@@ -247,14 +303,28 @@ __all__ = ["UserService", "UserDTO", "UserNotFoundError"]
 
 ```python
 # presentation/routes.py
+"""HTTP route handlers for user endpoints."""
+
 from fastapi import APIRouter, HTTPException
 from my_project.application.services import UserService
 
+
+# ============================================================================
+# Public API - Blueprint Registration
+# ============================================================================
+
 router = APIRouter()
+
+
+# ============================================================================
+# Core Logic - Route Handlers
+# ============================================================================
 
 @router.get("/users/{user_id}")
 def get_user(user_id: int, user_service: UserService):
     """
+    Get user by ID.
+
     Thin controller:
     1. Validate input (FastAPI does this)
     2. Call service
@@ -280,7 +350,15 @@ def get_user(user_id: int, user_service: UserService):
 
 ```python
 # application/services.py
+"""User service containing business logic."""
+
 from my_project.data.repositories import UserRepository
+from my_project.data.models import User
+
+
+# ============================================================================
+# Core Logic
+# ============================================================================
 
 class UserService:
     """User business logic."""
@@ -298,6 +376,13 @@ class UserService:
             raise UserNotFoundError(f"User {user_id} not found")
 
         return UserDTO(id=user.id, email=user.email)
+
+
+# ============================================================================
+# Public API
+# ============================================================================
+
+__all__ = ["UserService"]
 ```
 
 **Rules**:
@@ -312,8 +397,16 @@ class UserService:
 
 ```python
 # data/repositories.py
+"""Repository layer for database access."""
+
 from sqlalchemy.orm import Session
+
 from my_project.data.models import User
+
+
+# ============================================================================
+# Core Logic
+# ============================================================================
 
 class SqlUserRepository:
     """SQL implementation of user repository."""
@@ -329,6 +422,13 @@ class SqlUserRepository:
         """Persist user to database."""
         self.session.add(user)
         self.session.commit()
+
+
+# ============================================================================
+# Public API
+# ============================================================================
+
+__all__ = ["SqlUserRepository"]
 ```
 
 **Rules**:
@@ -451,7 +551,14 @@ build-backend = "poetry.core.masonry.api"
 ### Configuration Management
 ```python
 # config.py
+"""Application configuration settings."""
+
 from pydantic_settings import BaseSettings
+
+
+# ============================================================================
+# Data Models
+# ============================================================================
 
 class Settings(BaseSettings):
     """Application configuration."""
@@ -468,6 +575,11 @@ class Settings(BaseSettings):
 
     class Config:
         env_file = ".env"
+
+
+# ============================================================================
+# Public API
+# ============================================================================
 
 settings = Settings()
 ```
@@ -516,9 +628,18 @@ tests/
 ### Testing Business Logic (Application Layer)
 ```python
 # tests/unit/test_services.py
+"""Unit tests for business logic services."""
+
 import pytest
+
 from my_project.application.services import UserService, UserNotFoundError
+from my_project.data.models import User
 from my_project.data.repositories import UserRepository
+
+
+# ============================================================================
+# Helper Functions
+# ============================================================================
 
 class MockUserRepository:
     """Mock repository for testing."""
@@ -531,6 +652,11 @@ class MockUserRepository:
 
     def save(self, user):
         self.users[user.id] = user
+
+
+# ============================================================================
+# Core Logic - Test Cases
+# ============================================================================
 
 def test_get_user_success():
     # Arrange
@@ -567,10 +693,18 @@ def test_get_user_invalid_id():
 ### Testing Data Layer
 ```python
 # tests/unit/test_repositories.py
+"""Unit tests for data repositories."""
+
 import pytest
-from unittest.mock import Mock, MagicMock
-from my_project.data.repositories import SqlUserRepository
+from unittest.mock import Mock
+
 from my_project.data.models import User
+from my_project.data.repositories import SqlUserRepository
+
+
+# ============================================================================
+# Core Logic - Test Cases
+# ============================================================================
 
 def test_get_user_from_database():
     # Arrange
@@ -604,13 +738,26 @@ def test_save_user_commits():
 ### Testing API Endpoints
 ```python
 # tests/integration/test_api.py
+"""Integration tests for API endpoints."""
+
 import pytest
 from fastapi.testclient import TestClient
+
 from my_project.main import app
+
+
+# ============================================================================
+# Helper Functions - Fixtures
+# ============================================================================
 
 @pytest.fixture
 def client():
     return TestClient(app)
+
+
+# ============================================================================
+# Core Logic - Test Cases
+# ============================================================================
 
 def test_get_user_endpoint_success(client):
     # Act
@@ -634,11 +781,19 @@ def test_get_user_endpoint_not_found(client):
 ### Testing with Real Database (Optional)
 ```python
 # tests/integration/test_database.py
+"""Integration tests with real database."""
+
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
+
 from my_project.data.models import Base, User
 from my_project.data.repositories import SqlUserRepository
+
+
+# ============================================================================
+# Helper Functions - Fixtures
+# ============================================================================
 
 @pytest.fixture
 def db_session():
@@ -648,6 +803,11 @@ def db_session():
     session = Session(engine)
     yield session
     session.close()
+
+
+# ============================================================================
+# Core Logic - Test Cases
+# ============================================================================
 
 def test_repository_with_real_db(db_session):
     # Arrange
@@ -666,8 +826,16 @@ def test_repository_with_real_db(db_session):
 ## Fixtures (conftest.py)
 ```python
 # tests/conftest.py
+"""Shared test fixtures."""
+
 import pytest
+
 from my_project.data.repositories import UserRepository
+
+
+# ============================================================================
+# Helper Functions - Fixtures
+# ============================================================================
 
 @pytest.fixture
 def mock_user_repo():
@@ -972,8 +1140,15 @@ DATABASE_URL=postgresql://user:pass@prod-db:5432/mydb
 ### Basic Logging Setup
 ```python
 # config.py
+"""Logging configuration."""
+
 import logging
 import sys
+
+
+# ============================================================================
+# Core Logic
+# ============================================================================
 
 def setup_logging(debug: bool = False):
     """Configure application logging."""
@@ -987,6 +1162,11 @@ def setup_logging(debug: bool = False):
             logging.FileHandler("app.log")
         ]
     )
+
+
+# ============================================================================
+# Main - Usage Example
+# ============================================================================
 
 # Usage in main.py
 from my_project.config import setup_logging, settings
@@ -1087,7 +1267,8 @@ app.middleware("http")(log_requests)
 - [ ] Write test scenarios
 
 ## During Coding
-- [ ] Follow file organization order
+- [ ] Follow file organization order (10-section universal order)
+- [ ] **Use visual section markers (`# ============`) for all sections**
 - [ ] Add type hints to all functions
 - [ ] Add docstrings to public APIs
 - [ ] Write tests alongside code
@@ -1127,18 +1308,36 @@ app.middleware("http")(log_requests)
 
 ```python
 # main.py
-from fastapi import FastAPI, Depends
+"""Main application entry point."""
+
+from fastapi import Depends, FastAPI
 from sqlalchemy.orm import Session
+
+from my_project.application.services import UserService
 from my_project.data.database import get_db
 from my_project.data.repositories import SqlUserRepository
-from my_project.application.services import UserService
+
+
+# ============================================================================
+# Public API - Application Setup
+# ============================================================================
 
 app = FastAPI()
+
+
+# ============================================================================
+# Helper Functions - Dependency Injection
+# ============================================================================
 
 def get_user_service(db: Session = Depends(get_db)) -> UserService:
     """Dependency injection for UserService."""
     repo = SqlUserRepository(db)
     return UserService(repo)
+
+
+# ============================================================================
+# Core Logic - Route Handlers
+# ============================================================================
 
 @app.get("/users/{user_id}")
 def get_user(user_id: int, service: UserService = Depends(get_user_service)):
@@ -1149,13 +1348,26 @@ def get_user(user_id: int, service: UserService = Depends(get_user_service)):
 
 ```python
 # data/database.py
+"""Database configuration and session management."""
+
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, declarative_base
+from sqlalchemy.orm import declarative_base, sessionmaker
+
 from my_project.config import settings
+
+
+# ============================================================================
+# Data Models - Database Setup
+# ============================================================================
 
 engine = create_engine(settings.database_url)
 SessionLocal = sessionmaker(bind=engine)
 Base = declarative_base()
+
+
+# ============================================================================
+# Core Logic - Session Management
+# ============================================================================
 
 def get_db():
     """Database session dependency."""
@@ -1170,9 +1382,17 @@ def get_db():
 
 ```python
 # main.py
-import sys
+"""CLI entry point for the application."""
+
 import argparse
+import sys
+
 from my_project.config import setup_logging
+
+
+# ============================================================================
+# Core Logic - Main Function
+# ============================================================================
 
 def main() -> int:
     """Main entry point."""
@@ -1188,6 +1408,11 @@ def main() -> int:
     except Exception as e:
         logger.error(f"Application failed: {e}")
         return 1
+
+
+# ============================================================================
+# Main - Script Entry Point
+# ============================================================================
 
 if __name__ == "__main__":
     sys.exit(main())
